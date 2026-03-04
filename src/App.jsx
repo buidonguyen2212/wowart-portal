@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { loadData, saveData, onDataChange } from "./firebase.js";
+import * as XLSX from "xlsx";
 
 const B="#1D60A4",Y="#F5DB2F",O="#F4C42D",D="#333",G="#22C55E",R="#EF4444",BG="#F8FAFC",W="#FFF";
 const fmt=n=>(n||0).toLocaleString("vi-VN")+"đ";
@@ -84,15 +85,22 @@ const calcObs=(scores,liets)=>{
 };
 
 const initData=()=>({
+  users:[
+    {id:"u_ceo",name:"CEO / Group Manager",role:"ceo",password:"wowart@789"},
+    {id:"u_am",name:"Academic Manager",role:"academic",password:"academic@789",centerIds:[]},
+    {id:"u_adm_q7",name:"Admin Q7",role:"admin_center",password:"q7@789",centerIds:["c1"]},
+    {id:"u_adm_tp",name:"Admin Tân Phú",role:"admin_center",password:"tp@789",centerIds:["c2"]},
+    {id:"u_kt",name:"Kế toán",role:"accountant",password:"ketoan@789"},
+  ],
   centers:[
     {id:"c1",name:"Q7",type:"b2c"},
     {id:"c2",name:"Tân Phú",type:"b2c"},
     {id:"b1",name:"Trường Nguyễn Bỉnh Khiêm",type:"b2b"},
   ],
   teachers:[
-    {id:"t1",name:"Nguyễn Thị Hạnh",phone:"0901234567",dob:"1995-03-15",education:"ĐH Mỹ Thuật TPHCM",certificate:"Y3K Level 2",joinDate:"2024-01-10",employType:"full",fixedSalary:9000000,baselineSessions:32,otRateB2C:165000,otRateB2B:140000,salaryB2C:165000,salaryB2B:140000,level:"standard",centerIds:["c1"]},
-    {id:"t2",name:"Trần Minh Khoa",phone:"0912345678",dob:"1998-07-22",education:"CĐ Sư phạm MT",certificate:"Y3K Level 1",joinDate:"2025-06-01",employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:130000,otRateB2B:110000,salaryB2C:130000,salaryB2B:110000,level:"junior",centerIds:["c2","b1"]},
-    {id:"t3",name:"Lê Thị Mai",phone:"0923456789",dob:"1996-12-05",education:"ĐH Sư phạm TPHCM",certificate:"Y3K Level 3",joinDate:"2023-05-15",employType:"full",fixedSalary:11000000,baselineSessions:32,otRateB2C:200000,otRateB2B:170000,salaryB2C:200000,salaryB2B:170000,level:"senior",centerIds:["c1","b1"]},
+    {id:"t1",name:"Nguyễn Thị Hạnh",phone:"0901234567",dob:"1995-03-15",education:"ĐH Mỹ Thuật TPHCM",certificate:"Y3K Level 2",joinDate:"2024-01-10",employType:"full",status:"active",fixedSalary:9000000,baselineSessions:32,otRateB2C:165000,otRateB2B:140000,salaryB2C:165000,salaryB2B:140000,level:"standard",centerIds:["c1"],bankName:"",bankAccount:"",bankHolder:""},
+    {id:"t2",name:"Trần Minh Khoa",phone:"0912345678",dob:"1998-07-22",education:"CĐ Sư phạm MT",certificate:"Y3K Level 1",joinDate:"2025-06-01",employType:"part",status:"active",fixedSalary:0,baselineSessions:32,otRateB2C:130000,otRateB2B:110000,salaryB2C:130000,salaryB2B:110000,level:"junior",centerIds:["c2","b1"],bankName:"",bankAccount:"",bankHolder:""},
+    {id:"t3",name:"Lê Thị Mai",phone:"0923456789",dob:"1996-12-05",education:"ĐH Sư phạm TPHCM",certificate:"Y3K Level 3",joinDate:"2023-05-15",employType:"full",status:"active",fixedSalary:11000000,baselineSessions:32,otRateB2C:200000,otRateB2B:170000,salaryB2C:200000,salaryB2B:170000,level:"senior",centerIds:["c1","b1"],bankName:"",bankAccount:"",bankHolder:""},
   ],
   students:[
     {id:"s1",name:"Nguyễn Văn An",gender:"Nam",dob:"2018-05-10",parentName:"Nguyễn Thị Lan",parentPhone:"0987654321",enrollDate:"2025-09-01",expiryDate:"2026-04-30",status:"Đang học",centerId:"c1",studentLevel:"Level 2",notes:"Bé thích vẽ động vật, PH muốn bé tự tin hơn",isTrial:false},
@@ -138,17 +146,16 @@ const isOnTime=(checkInISO,classStartTime)=>{
 export default function App(){
   const[data,setData]=useState(null);
   const[loading,setLoading]=useState(true);
-  const[role,setRole]=useState(null);
-  const[user,setUser]=useState(null);
+  const[role,setRole]=useState(null);// "ceo","admin_center","academic","accountant","teacher"
+  const[user,setUser]=useState(null);// {id,name,role,centerIds?}
   const[tab,setTab]=useState("");
 
   useEffect(()=>{
-    // Real-time listener — all devices sync automatically
     const unsub=onDataChange((val)=>{
       const parsed={...val};
-      // Firebase strips empty arrays — restore defaults
       parsed.centers=(parsed.centers||[]).map(c=>({...c,type:c.type||"b2c"}));
-      parsed.teachers=(parsed.teachers||[]).map(t=>({...t,employType:t.employType||"part",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B}));
+      parsed.teachers=(parsed.teachers||[]).map(t=>({...t,employType:t.employType||"part",status:t.status||"active",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B,bankName:t.bankName||"",bankAccount:t.bankAccount||"",bankHolder:t.bankHolder||""}));
+      parsed.users=parsed.users||initData().users;
       parsed.students=parsed.students||[];
       parsed.classes=parsed.classes||[];
       parsed.sessions=parsed.sessions||[];
@@ -159,44 +166,96 @@ export default function App(){
       parsed.bonusPolicy=parsed.bonusPolicy||initData().bonusPolicy;
       setData(parsed);setLoading(false);
     });
-    // Init if empty
     loadData().then(val=>{if(!val){const d=initData();saveData(d);}}).catch(()=>{setData(initData());setLoading(false);});
     return ()=>{if(unsub)unsub();};
   },[]);
   const save=async nd=>{setData(nd);try{await saveData(nd);}catch(e){console.error("Firebase save error:",e);}};
 
+  // Filter data by center for admin_center role
+  const scopedData=(user&&user.role==="admin_center"&&user.centerIds)?{
+    ...data,
+    centers:data.centers.filter(c=>user.centerIds.includes(c.id)),
+    teachers:data.teachers.filter(t=>(t.centerIds||[]).some(cid=>user.centerIds.includes(cid))),
+    students:data.students.filter(s=>user.centerIds.includes(s.centerId)),
+    classes:data.classes.filter(cl=>user.centerIds.includes(cl.centerId)),
+    sessions:data.sessions.filter(s=>{const cl=data.classes.find(c=>c.id===s.classId);return cl&&user.centerIds.includes(cl.centerId);}),
+    renewals:data.renewals.filter(r=>{const s=data.students.find(st=>st.id===r.studentId);return s&&user.centerIds.includes(s.centerId);}),
+    referrals:data.referrals.filter(r=>{const s=data.students.find(st=>st.id===r.newStudentId);return s&&user.centerIds.includes(s.centerId);}),
+    observations:data.observations.filter(o=>{const t=data.teachers.find(te=>te.id===o.teacherId);return t&&(t.centerIds||[]).some(cid=>user.centerIds.includes(cid));}),
+  }:data;
+
   if(loading)return <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",background:BG}}><div style={{textAlign:"center"}}><div style={{fontSize:36,fontWeight:900,color:B}}>WOW ART</div><div style={{color:"#888",marginTop:8}}>Đang tải...</div></div></div>;
-  if(!role)return <RoleSelect onSelect={r=>{setRole(r);setTab(r==="admin"?"dashboard":"attendance");}}/>;
-  if(role==="admin"&&!user)return <AdminLogin onLogin={()=>setUser({id:"admin",name:"Admin"})} onBack={()=>setRole(null)}/>;
-  if(role==="teacher"&&!user)return <TeacherLogin teachers={data.teachers} onLogin={t=>{setUser(t);setTab("attendance");}} onBack={()=>setRole(null)}/>;
+  if(!role)return <RoleSelect onSelect={(r,u)=>{setRole(r);setUser(u);setTab(r==="teacher"?"attendance":"dashboard");}}/>;
+  if(role&&!user)return <StaffLogin data={data} roleType={role} onLogin={u=>{setUser(u);setTab(role==="teacher"?"attendance":"dashboard");}} onBack={()=>setRole(null)}/>;
 
   const logout=()=>{setRole(null);setUser(null);setTab("");};
-  const adminTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"obs",label:"Dự giờ",icon:"👁"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"}];
+  const R_CEO=role==="ceo";
+  const R_ADM=role==="admin_center";
+  const R_ACA=role==="academic";
+  const R_ACC=role==="accountant";
+  const R_TCH=role==="teacher";
+  const viewData=R_ADM?scopedData:data;
+  const canEdit=R_CEO||R_ADM;// only CEO + Admin Center can edit
+
+  // Tab configs per role
+  const ceoTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"users",label:"Users",icon:"👥"}];
+  const admTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"payroll",label:"Bảng lương",icon:"💰"}];
+  const acaTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"obs",label:"Dự giờ",icon:"👁"},{key:"payroll",label:"Xem lương",icon:"💰"}];
+  const accTabs=[{key:"payroll",label:"Bảng lương",icon:"💰"}];
   const teacherTabs=[{key:"attendance",label:"Điểm danh",icon:"📋"},{key:"schedule",label:"Lịch dạy",icon:"📅"},{key:"history",label:"Lịch sử",icon:"🕐"},{key:"salary",label:"Lương",icon:"💰"},{key:"profile",label:"Hồ sơ",icon:"👤"}];
-  const tabs=role==="admin"?adminTabs:teacherTabs;
+  const tabs=R_CEO?ceoTabs:R_ADM?admTabs:R_ACA?acaTabs:R_ACC?accTabs:teacherTabs;
+
+  const roleLabel=R_CEO?"👑 CEO":R_ADM?`📋 ${user.name}`:R_ACA?"🎓 Academic":R_ACC?"💰 Kế toán":user?.name;
+  const headerBg=R_CEO?"#1a1a2e":R_ADM?B:R_ACA?"#7C3AED":R_ACC?"#059669":B;
 
   return(
     <div style={{minHeight:"100vh",background:BG,fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
-      <div style={{background:B,color:W,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:headerBg,color:W,padding:"10px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:100}}>
         <div><span style={{fontWeight:800,fontSize:17}}>WOW ART</span><span style={{fontSize:10,opacity:.8,marginLeft:6}}>Portal</span></div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <Badge bg="rgba(255,255,255,.2)" color={W}>{role==="admin"?"🔐 Admin":user?.name}</Badge>
+          <Badge bg="rgba(255,255,255,.2)" color={W}>{roleLabel}</Badge>
           <button onClick={logout} style={{background:"rgba(255,255,255,.2)",border:"none",color:W,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:11}}>Thoát</button>
         </div>
       </div>
       <div style={{padding:"0 0 85px 0"}}>
-        {role==="admin"&&<>
-          {tab==="dashboard"&&<ADash data={data} save={save}/>}
+        {/* CEO — sees everything except obs */}
+        {R_CEO&&<>
+          {tab==="dashboard"&&<ADash data={data} save={save} canEdit={true}/>}
           {tab==="ai"&&<AAIAgent data={data}/>}
-          {tab==="teachers"&&<ATeachers data={data} save={save}/>}
-          {tab==="classes"&&<AClasses data={data} save={save}/>}
-          {tab==="renewals"&&<ARenewals data={data} save={save}/>}
-          {tab==="referrals"&&<ARefr data={data} save={save}/>}
-          {tab==="obs"&&<AObs data={data} save={save}/>}
+          {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={true}/>}
+          {tab==="classes"&&<AClasses data={data} save={save} canEdit={true}/>}
+          {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={true}/>}
+          {tab==="referrals"&&<ARefr data={data} save={save} canEdit={true}/>}
           {tab==="policy"&&<APolicy data={data} save={save}/>}
-          {tab==="payroll"&&<APayroll data={data} save={save}/>}
+          {tab==="payroll"&&<APayroll data={data} save={save} canEdit={true}/>}
+          {tab==="users"&&<AUsers data={data} save={save}/>}
         </>}
-        {role==="teacher"&&<>
+        {/* Admin Center — full data but UI restricted to assigned centers */}
+        {R_ADM&&<>
+          {tab==="dashboard"&&<ADash data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+          {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+          {tab==="classes"&&<AClasses data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+          {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+          {tab==="referrals"&&<ARefr data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+          {tab==="payroll"&&<APayroll data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+        </>}
+        {/* Academic — read only + obs edit */}
+        {R_ACA&&<>
+          {tab==="dashboard"&&<ADash data={data} save={save} canEdit={false}/>}
+          {tab==="ai"&&<AAIAgent data={data}/>}
+          {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={false}/>}
+          {tab==="classes"&&<AClasses data={data} save={save} canEdit={false}/>}
+          {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={false}/>}
+          {tab==="referrals"&&<ARefr data={data} save={save} canEdit={false}/>}
+          {tab==="obs"&&<AObs data={data} save={save}/>}
+          {tab==="payroll"&&<APayroll data={data} save={save} canEdit={false}/>}
+        </>}
+        {/* Accountant — payroll only */}
+        {R_ACC&&<>
+          {tab==="payroll"&&<APayroll data={data} save={save} canEdit={false} showBank={true}/>}
+        </>}
+        {/* Teacher */}
+        {R_TCH&&<>
           {tab==="attendance"&&<TAtt data={data} save={save} user={user}/>}
           {tab==="schedule"&&<TSchedule data={data} user={user}/>}
           {tab==="history"&&<THist data={data} user={user}/>}
@@ -206,7 +265,7 @@ export default function App(){
       </div>
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:W,borderTop:"1px solid #E2E8F0",display:"flex",overflowX:"auto",padding:"3px 0 6px",zIndex:100}}>
         {tabs.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)} style={{flex:"1 0 auto",minWidth:50,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:0,padding:"3px 4px",color:tab===t.key?B:"#94A3B8",fontWeight:tab===t.key?700:400,fontSize:9}}>
+          <button key={t.key} onClick={()=>setTab(t.key)} style={{flex:"1 0 auto",minWidth:50,background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:0,padding:"3px 4px",color:tab===t.key?headerBg:"#94A3B8",fontWeight:tab===t.key?700:400,fontSize:9}}>
             <span style={{fontSize:16}}>{t.icon}</span>{t.label}
           </button>
         ))}
@@ -217,58 +276,79 @@ export default function App(){
 
 /* LOGIN */
 function RoleSelect({onSelect}){
+  const roles=[
+    {key:"ceo",label:"CEO / Group Manager",icon:"👑",desc:"Xem tổng thể, quản lý users",color:"#1a1a2e"},
+    {key:"admin_center",label:"Admin Center",icon:"📋",desc:"Quản lý center được gán",color:B},
+    {key:"academic",label:"Academic Manager",icon:"🎓",desc:"Dự giờ, báo cáo, phân tích",color:"#7C3AED"},
+    {key:"accountant",label:"Kế toán",icon:"💰",desc:"Xem bảng lương & chuyển khoản",color:"#059669"},
+    {key:"teacher",label:"Giáo viên",icon:"👩‍🏫",desc:"Điểm danh, lịch dạy, lương",color:B},
+  ];
   return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${B},#2980B9)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
-    <div style={{background:W,borderRadius:20,padding:"36px 26px",maxWidth:380,width:"100%",boxShadow:"0 20px 60px rgba(0,0,0,.3)"}}>
-      <div style={{textAlign:"center",marginBottom:28}}><div style={{fontSize:38,fontWeight:900,color:B}}>WOW ART</div><div style={{fontSize:11,color:"#888",marginTop:2}}>Teacher Portal v3.0</div></div>
-      <div style={{fontSize:13,fontWeight:600,color:D,marginBottom:12,textAlign:"center"}}>Bạn là...</div>
-      {[{key:"teacher",icon:"👩‍🏫",label:"Giáo viên",desc:"Điểm danh, xem lương"},{key:"admin",icon:"🔐",label:"Admin / Kế toán",desc:"Quản lý, setup, duyệt lương"}].map(r=>(
-        <button key={r.key} onClick={()=>onSelect(r.key)} style={{width:"100%",padding:"16px 18px",border:"2px solid #E2E8F0",borderRadius:13,background:W,cursor:"pointer",marginBottom:8,textAlign:"left",display:"flex",alignItems:"center",gap:12,transition:"all .2s"}}
-          onMouseEnter={e=>{e.currentTarget.style.borderColor=B;}}onMouseLeave={e=>{e.currentTarget.style.borderColor="#E2E8F0";}}>
-          <span style={{fontSize:28}}>{r.icon}</span><div><div style={{fontWeight:700,fontSize:15,color:D}}>{r.label}</div><div style={{fontSize:11,color:"#888",marginTop:1}}>{r.desc}</div></div>
+    <div style={{marginBottom:24,textAlign:"center"}}><div style={{fontSize:42,fontWeight:900,color:W}}>WOW ART</div><div style={{color:"rgba(255,255,255,.7)",fontSize:13}}>Portal v4.0 — Chọn vai trò</div></div>
+    <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:380}}>
+      {roles.map(r=>(
+        <button key={r.key} onClick={()=>onSelect(r.key,null)} style={{display:"flex",alignItems:"center",gap:14,padding:"16px 18px",borderRadius:14,border:"none",background:"rgba(255,255,255,.95)",cursor:"pointer",textAlign:"left",boxShadow:"0 4px 15px rgba(0,0,0,.15)",transition:"transform .15s"}}>
+          <span style={{fontSize:28,width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:12,background:r.color+"15"}}>{r.icon}</span>
+          <div><div style={{fontWeight:700,fontSize:15,color:r.color}}>{r.label}</div><div style={{fontSize:11,color:"#888"}}>{r.desc}</div></div>
         </button>
       ))}
     </div>
   </div>;
 }
-function AdminLogin({onLogin,onBack}){
-  const[pw,setPw]=useState("");const[err,setErr]=useState(false);const[showPw,setShowPw]=useState(false);
-  const go=()=>{if(pw===ADMIN_PW)onLogin();else setErr(true);};
-  return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${B},#2980B9)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
-    <Card style={{maxWidth:360,width:"100%",padding:"32px 24px",boxShadow:"0 20px 60px rgba(0,0,0,.3)",borderRadius:20}}>
-      <div style={{textAlign:"center",marginBottom:20}}><span style={{fontSize:36}}>🔐</span><div style={{fontSize:17,fontWeight:700,marginTop:6}}>Đăng nhập Admin</div></div>
-      <div style={{marginBottom:8}}>
-        <label style={{fontSize:11,fontWeight:600,color:"#666",display:"block",marginBottom:3}}>Mật khẩu</label>
-        <div style={{position:"relative"}}>
-          <input type={showPw?"text":"password"} value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Nhập mật khẩu..." style={{width:"100%",padding:"9px 12px",paddingRight:40,borderRadius:9,border:`1.5px solid ${err?R:"#E2E8F0"}`,fontSize:13,boxSizing:"border-box",outline:"none"}}/>
-          <button onClick={()=>setShowPw(!showPw)} style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:16,padding:2,color:"#94A3B8"}}>{showPw?"🙈":"👁"}</button>
+
+function StaffLogin({data,roleType,onLogin,onBack}){
+  const[selected,setSelected]=useState("");const[pass,setPass]=useState("");const[err,setErr]=useState("");const[showPass,setShowPass]=useState(false);
+  
+  if(roleType==="teacher"){
+    const activeTeachers=data.teachers.filter(t=>(t.status||"active")==="active");
+    const go=()=>{const t=activeTeachers.find(x=>x.id===selected);if(!t){setErr("Chọn giáo viên");return;}if(pass!==t.phone){setErr("Sai số điện thoại");return;}onLogin({...t,role:"teacher"});};
+    return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${B},#2980B9)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
+      <Card style={{maxWidth:360,width:"100%",padding:"32px 24px",boxShadow:"0 20px 60px rgba(0,0,0,.3)",borderRadius:20}}>
+        <div style={{textAlign:"center",marginBottom:20}}><span style={{fontSize:36}}>👩‍🏫</span><div style={{fontSize:17,fontWeight:700,marginTop:6}}>Đăng nhập Giáo viên</div></div>
+        <Sel label="Chọn tên" value={selected} onChange={v=>{setSelected(v);setErr("");}} options={[{value:"",label:"-- Chọn giáo viên --"},...activeTeachers.map(t=>({value:t.id,label:`${t.name} (${t.id.toUpperCase()})`}))]}/>
+        <div style={{position:"relative"}}><Inp label="Mật khẩu (số di động)" type={showPass?"text":"password"} value={pass} onChange={e=>{setPass(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Nhập SĐT..."/>
+          <button onClick={()=>setShowPass(!showPass)} style={{position:"absolute",right:8,top:26,background:"none",border:"none",cursor:"pointer",fontSize:14}}>{showPass?"🙈":"👁"}</button>
         </div>
-      </div>
-      {err&&<div style={{color:R,fontSize:11,marginBottom:6}}>Sai mật khẩu</div>}
-      <Btn full onClick={go}>Đăng nhập</Btn>
-      <button onClick={onBack} style={{width:"100%",background:"none",border:"none",color:"#888",marginTop:10,cursor:"pointer",fontSize:12}}>← Quay lại</button>
-    </Card>
-  </div>;
-}
-function TeacherLogin({teachers,onLogin,onBack}){
-  const[tid,setTid]=useState("");const[phone,setPhone]=useState("");const[err,setErr]=useState("");
-  const go=()=>{const t=teachers.find(x=>x.id===tid);if(!t){setErr("Chọn giáo viên");return;}if(phone!==t.phone){setErr("Sai số điện thoại");return;}onLogin(t);};
-  return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${B},#2980B9)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
+        {err&&<div style={{color:R,fontSize:11,marginBottom:6}}>{err}</div>}
+        <Btn full onClick={go}>Đăng nhập</Btn>
+        <button onClick={onBack} style={{width:"100%",background:"none",border:"none",color:"#888",marginTop:10,cursor:"pointer",fontSize:12}}>← Quay lại</button>
+      </Card>
+    </div>;
+  }
+
+  const roleConfig={ceo:{icon:"👑",label:"CEO / Group Manager",color:"#1a1a2e"},admin_center:{icon:"📋",label:"Admin Center",color:B},academic:{icon:"🎓",label:"Academic Manager",color:"#7C3AED"},accountant:{icon:"💰",label:"Kế toán",color:"#059669"}};
+  const cfg=roleConfig[roleType]||roleConfig.ceo;
+  const availUsers=(data.users||[]).filter(u=>u.role===roleType);
+  
+  const go=()=>{
+    if(availUsers.length===1){
+      const u=availUsers[0];if(pass!==u.password){setErr("Sai mật khẩu");return;}onLogin({...u});
+    }else{
+      const u=availUsers.find(x=>x.id===selected);if(!u){setErr("Chọn tài khoản");return;}if(pass!==u.password){setErr("Sai mật khẩu");return;}onLogin({...u});
+    }
+  };
+
+  return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${cfg.color},${cfg.color}CC)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
     <Card style={{maxWidth:360,width:"100%",padding:"32px 24px",boxShadow:"0 20px 60px rgba(0,0,0,.3)",borderRadius:20}}>
-      <div style={{textAlign:"center",marginBottom:20}}><span style={{fontSize:36}}>👩‍🏫</span><div style={{fontSize:17,fontWeight:700,marginTop:6}}>Đăng nhập Giáo viên</div></div>
-      <Sel label="Chọn tên" value={tid} onChange={v=>{setTid(v);setErr("");}} options={[{value:"",label:"-- Chọn giáo viên --"},...teachers.map(t=>({value:t.id,label:`${t.name} (${t.id.toUpperCase()})`}))]}/>
-      {tid&&<div style={{fontSize:11,color:"#888",marginBottom:6}}>Mã GV: <strong>{tid.toUpperCase()}</strong></div>}
-      <Inp label="Mật khẩu (số di động)" type="tel" value={phone} onChange={e=>{setPhone(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Nhập SĐT..."/>
+      <div style={{textAlign:"center",marginBottom:20}}><span style={{fontSize:36}}>{cfg.icon}</span><div style={{fontSize:17,fontWeight:700,marginTop:6}}>{cfg.label}</div></div>
+      {availUsers.length>1&&<Sel label="Chọn tài khoản" value={selected} onChange={v=>{setSelected(v);setErr("");}} options={[{value:"",label:"-- Chọn --"},...availUsers.map(u=>({value:u.id,label:u.name+(u.centerIds?.length?` (${u.centerIds.join(",")})`:"")}))]}/>}
+      {availUsers.length===1&&<div style={{textAlign:"center",marginBottom:12,padding:8,background:cfg.color+"10",borderRadius:8}}><div style={{fontWeight:700,color:cfg.color}}>{availUsers[0].name}</div></div>}
+      {availUsers.length===0&&<div style={{textAlign:"center",color:R,marginBottom:12}}>Chưa có tài khoản. Liên hệ CEO để tạo.</div>}
+      <div style={{position:"relative"}}><Inp label="Mật khẩu" type={showPass?"text":"password"} value={pass} onChange={e=>{setPass(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Nhập mật khẩu..."/>
+        <button onClick={()=>setShowPass(!showPass)} style={{position:"absolute",right:8,top:26,background:"none",border:"none",cursor:"pointer",fontSize:14}}>{showPass?"🙈":"👁"}</button>
+      </div>
       {err&&<div style={{color:R,fontSize:11,marginBottom:6}}>{err}</div>}
-      <Btn full onClick={go}>Đăng nhập</Btn>
+      <Btn full onClick={go} bg={cfg.color}>Đăng nhập</Btn>
       <button onClick={onBack} style={{width:"100%",background:"none",border:"none",color:"#888",marginTop:10,cursor:"pointer",fontSize:12}}>← Quay lại</button>
     </Card>
   </div>;
 }
 
 /* ADMIN DASHBOARD */
-function ADash({data,save}){
+function ADash({data,save,canEdit=true,scopeCenterIds}){
   const[fMo,setFMo]=useState(mk());
-  const[fCenter,setFCenter]=useState("all");
+  const scopedCenters=scopeCenterIds?data.centers.filter(c=>scopeCenterIds.includes(c.id)):data.centers;
+  const[fCenter,setFCenter]=useState(scopeCenterIds?scopeCenterIds[0]||"all":"all");
   const[fTeacher,setFTeacher]=useState("all");
   const[fType,setFType]=useState("all");// full|part|all
   const[editSes,setEditSes]=useState(null);
@@ -404,8 +484,8 @@ function ADash({data,save}){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
         <div><label style={{fontSize:10,fontWeight:600,color:"#888"}}>Tháng</label><input type="month" value={fMo} onChange={e=>setFMo(e.target.value)} style={{width:"100%",padding:"6px 8px",borderRadius:7,border:"1.5px solid #E2E8F0",fontSize:12,boxSizing:"border-box"}}/></div>
         <div><label style={{fontSize:10,fontWeight:600,color:"#888"}}>Trung tâm / Điểm dạy</label><select value={fCenter} onChange={e=>setFCenter(e.target.value)} style={{width:"100%",padding:"6px 8px",borderRadius:7,border:"1.5px solid #E2E8F0",fontSize:12,boxSizing:"border-box",background:W}}>
-          <option value="all">Tất cả</option>
-          {data.centers.map(c=><option key={c.id} value={c.id}>{c.type==="b2b"?"🏫":"🏠"} {c.name}</option>)}
+          {!scopeCenterIds&&<option value="all">Tất cả</option>}
+          {scopedCenters.map(c=><option key={c.id} value={c.id}>{c.type==="b2b"?"🏫":"🏠"} {c.name}</option>)}
         </select></div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
@@ -483,6 +563,14 @@ function ADash({data,save}){
           </div>
           {isEditing&&<div style={{marginTop:8,paddingTop:8,borderTop:"1px dashed #E2E8F0"}}>
             <div style={{fontSize:11,fontWeight:700,color:B,marginBottom:6}}>Chỉnh sửa điểm danh:</div>
+            {/* Substitute teacher */}
+            <div style={{marginBottom:8,padding:8,background:"#FFFBEB",borderRadius:8,border:"1px solid #FDE68A"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#92400E",marginBottom:4}}>🔄 GV dạy thế (đổi người nhận lương buổi này)</div>
+              <select value={s.teacherId} onChange={e=>{save({...data,sessions:data.sessions.map(ss=>ss.id===s.id?{...ss,teacherId:e.target.value,substituteNote:`Dạy thế cho ${t?.name}`}:ss)});}} style={{width:"100%",padding:"6px 10px",borderRadius:7,border:"1.5px solid #FDE68A",fontSize:12,background:W}}>
+                {data.teachers.filter(x=>(x.status||"active")==="active").map(x=><option key={x.id} value={x.id}>{x.name}{x.id===s.teacherId?" (hiện tại)":""}</option>)}
+              </select>
+              {s.substituteNote&&<div style={{fontSize:9,color:"#92400E",marginTop:2}}>📝 {s.substituteNote}</div>}
+            </div>
             {(s.attendance||[]).map(a=>(
               <div key={a.studentId} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",fontSize:12}}>
                 <span>{a.name} {a.isTrial&&"🌟"}</span>
@@ -507,24 +595,33 @@ function ADash({data,save}){
 }
 
 /* ADMIN TEACHERS */
-function ATeachers({data,save}){
+function ATeachers({data,save,canEdit=true,fullData}){
   const[show,setShow]=useState(false);const[edit,setEdit]=useState(null);
-  const empty={name:"",phone:"",dob:"",education:"",certificate:"",joinDate:td(),employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:150000,otRateB2B:130000,salaryB2C:150000,salaryB2B:130000,level:"standard",centerIds:[data.centers[0]?.id]};
+  const empty={name:"",phone:"",dob:"",education:"",certificate:"",joinDate:td(),employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:150000,otRateB2B:130000,salaryB2C:150000,salaryB2B:130000,level:"standard",centerIds:[data.centers[0]?.id],bankName:"",bankAccount:"",bankHolder:""};
   const[form,setForm]=useState(empty);const f=(k,v)=>setForm(p=>({...p,[k]:v}));
   const isFull=form.employType==="full";
   const doSave=()=>{
     if(!form.name||!form.phone)return alert("Nhập đủ tên và SĐT");
     if(edit)save({...data,teachers:data.teachers.map(t=>t.id===edit?{...t,...form}:t)});
-    else save({...data,teachers:[...data.teachers,{...form,id:uid()}]});
+    else save({...data,teachers:[...data.teachers,{...form,id:uid(),status:"active"}]});
     setShow(false);setEdit(null);setForm(empty);
   };
-  const startEdit=t=>{setForm({name:t.name,phone:t.phone,dob:t.dob||"",education:t.education||"",certificate:t.certificate||"",joinDate:t.joinDate||"",employType:t.employType||"part",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B,salaryB2C:t.salaryB2C,salaryB2B:t.salaryB2B,level:t.level,centerIds:t.centerIds||[]});setEdit(t.id);setShow(true);};
+  const startEdit=t=>{setForm({name:t.name,phone:t.phone,dob:t.dob||"",education:t.education||"",certificate:t.certificate||"",joinDate:t.joinDate||"",employType:t.employType||"part",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B,salaryB2C:t.salaryB2C,salaryB2B:t.salaryB2B,level:t.level,centerIds:t.centerIds||[],bankName:t.bankName||"",bankAccount:t.bankAccount||"",bankHolder:t.bankHolder||""});setEdit(t.id);setShow(true);};
+  const toggleStatus=(tid)=>{
+    const t=data.teachers.find(x=>x.id===tid);if(!t)return;
+    const newStatus=(t.status||"active")==="active"?"inactive":"active";
+    const label=newStatus==="inactive"?"🔒 KHÓA":"🔓 MỞ KHÓA";
+    if(!confirm(`${label} giáo viên ${t.name}?\n\n${newStatus==="inactive"?"GV sẽ KHÔNG thể đăng nhập Portal.":"GV sẽ có thể đăng nhập lại."}`))return;
+    save({...data,teachers:data.teachers.map(x=>x.id===tid?{...x,status:newStatus}:x)});
+  };
 
-  const fullTeachers=data.teachers.filter(t=>(t.employType||"part")==="full");
-  const partTeachers=data.teachers.filter(t=>(t.employType||"part")==="part");
+  const activeTeachers=data.teachers.filter(t=>(t.status||"active")==="active");
+  const inactiveTeachers=data.teachers.filter(t=>t.status==="inactive");
+  const fullTeachers=activeTeachers.filter(t=>(t.employType||"part")==="full");
+  const partTeachers=activeTeachers.filter(t=>(t.employType||"part")==="part");
 
   return <div style={{padding:14}}>
-    <Sec title={`Giáo viên (${data.teachers.length})`} action={<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}>
+    <Sec title={`Giáo viên (${data.teachers.length})`} action={canEdit&&<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}>
       {show&&<Card style={{border:`2px solid ${B}`,marginBottom:14}}>
         <Inp label="Họ và tên *" value={form.name} onChange={e=>f("name",e.target.value)}/>
         <Inp label="Số di động (mật khẩu) *" type="tel" value={form.phone} onChange={e=>f("phone",e.target.value)}/>
@@ -568,6 +665,15 @@ function ATeachers({data,save}){
             </button>
           ))}</div>
         </div>
+        {/* Bank info */}
+        <div style={{background:"#F0FDF4",borderRadius:8,padding:10,marginBottom:8}}>
+          <div style={{fontSize:11,fontWeight:700,color:"#059669",marginBottom:6}}>🏦 Tài khoản ngân hàng</div>
+          <Inp label="Ngân hàng" value={form.bankName} onChange={e=>f("bankName",e.target.value)} placeholder="VD: Vietcombank, MB Bank..."/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            <Inp label="Số tài khoản" value={form.bankAccount} onChange={e=>f("bankAccount",e.target.value)} placeholder="0123456789"/>
+            <Inp label="Tên chủ TK" value={form.bankHolder} onChange={e=>f("bankHolder",e.target.value)} placeholder="NGUYEN THI LAN"/>
+          </div>
+        </div>
         <div style={{display:"flex",gap:6}}><Btn full onClick={doSave} bg={G}>{edit?"Lưu":"Thêm"}</Btn><Btn full onClick={()=>{setShow(false);setEdit(null);}} bg="#E2E8F0" color="#666">Hủy</Btn></div>
       </Card>}
 
@@ -589,6 +695,7 @@ function ATeachers({data,save}){
                 </div>
               </div>
               <div style={{display:"flex",gap:4}}>
+                <button onClick={()=>toggleStatus(t.id)} title="Khóa/Mở GV" style={{background:O+"10",border:"none",borderRadius:7,padding:"5px 10px",color:"#B45309",cursor:"pointer",fontSize:11}}>🔒</button>
                 <button onClick={()=>startEdit(t)} style={{background:B+"10",border:"none",borderRadius:7,padding:"5px 10px",color:B,cursor:"pointer",fontSize:11}}>✏️</button>
                 <button onClick={()=>{if(confirm(`Xóa ${t.name}?`))save({...data,teachers:data.teachers.filter(x=>x.id!==t.id)});}} style={{background:R+"10",border:"none",borderRadius:7,padding:"5px 10px",color:R,cursor:"pointer",fontSize:11}}>🗑</button>
               </div>
@@ -615,8 +722,28 @@ function ATeachers({data,save}){
                 </div>
               </div>
               <div style={{display:"flex",gap:4}}>
+                <button onClick={()=>toggleStatus(t.id)} title="Khóa/Mở GV" style={{background:O+"10",border:"none",borderRadius:7,padding:"5px 10px",color:"#B45309",cursor:"pointer",fontSize:11}}>🔒</button>
                 <button onClick={()=>startEdit(t)} style={{background:B+"10",border:"none",borderRadius:7,padding:"5px 10px",color:B,cursor:"pointer",fontSize:11}}>✏️</button>
                 <button onClick={()=>{if(confirm(`Xóa ${t.name}?`))save({...data,teachers:data.teachers.filter(x=>x.id!==t.id)});}} style={{background:R+"10",border:"none",borderRadius:7,padding:"5px 10px",color:R,cursor:"pointer",fontSize:11}}>🗑</button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>}
+
+      {/* INACTIVE TEACHERS */}
+      {inactiveTeachers.length>0&&<div style={{marginTop:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:"#94A3B8",marginBottom:6,display:"flex",alignItems:"center",gap:4}}>🔒 Đã khóa ({inactiveTeachers.length})</div>
+        {inactiveTeachers.map(t=>(
+          <Card key={t.id} style={{padding:"10px 12px",borderLeft:"3px solid #CBD5E1",opacity:.7}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"#94A3B8",textDecoration:"line-through"}}>{t.name}</div>
+                <div style={{fontSize:10,color:"#CBD5E1"}}>{(t.employType||"part")==="full"?"Full":"Part"} • {t.phone} • Không thể đăng nhập</div>
+              </div>
+              <div style={{display:"flex",gap:4}}>
+                <button onClick={()=>toggleStatus(t.id)} title="Mở khóa GV" style={{background:G+"10",border:"none",borderRadius:7,padding:"5px 10px",color:G,cursor:"pointer",fontSize:11,fontWeight:700}}>🔓 Mở</button>
+                <button onClick={()=>{if(confirm(`Xóa vĩnh viễn ${t.name}?`))save({...data,teachers:data.teachers.filter(x=>x.id!==t.id)});}} style={{background:R+"10",border:"none",borderRadius:7,padding:"5px 10px",color:R,cursor:"pointer",fontSize:11}}>🗑</button>
               </div>
             </div>
           </Card>
@@ -627,7 +754,7 @@ function ATeachers({data,save}){
 }
 
 /* ADMIN CLASSES & STUDENTS */
-function AClasses({data,save}){
+function AClasses({data,save,canEdit=true,fullData}){
   const[show,setShow]=useState(false);
   const[showAddLoc,setShowAddLoc]=useState(false);
   const[newLoc,setNewLoc]=useState({name:"",type:"b2b"});
@@ -767,7 +894,12 @@ function AClasses({data,save}){
                 <span style={{fontWeight:700,fontSize:13}}>{DAYS_FULL[cl.day]} — Ca {cl.caNumber} ({cl.startTime}-{cl.endTime})</span>
                 <div style={{fontSize:11,color:"#888",marginTop:1}}>GV: {teacher?.name} • {cl.classLevel} • Sĩ số: <strong>{activeCount}</strong>/{sts.length}</div>
               </div>
-              <button onClick={()=>rmClass(cl.id)} style={{background:R+"10",border:"none",borderRadius:7,padding:"3px 8px",color:R,cursor:"pointer",fontSize:10}}>🗑</button>
+              <div style={{display:"flex",gap:3}}>
+                <select title="Chuyển GV" value={cl.teacherId} onChange={e=>{if(confirm(`Chuyển lớp ${DAYS_FULL[cl.day]} Ca${cl.caNumber} cho ${data.teachers.find(x=>x.id===e.target.value)?.name}?\n\n(Lương các buổi sau sẽ tính cho GV mới)`)){save({...data,classes:data.classes.map(c=>c.id===cl.id?{...c,teacherId:e.target.value}:c)});}}} style={{padding:"3px 4px",borderRadius:6,border:"1.5px solid #E2E8F0",fontSize:10,background:W,cursor:"pointer",maxWidth:100}}>
+                  {data.teachers.filter(x=>(x.status||"active")==="active").map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+                <button onClick={()=>rmClass(cl.id)} style={{background:R+"10",border:"none",borderRadius:7,padding:"3px 8px",color:R,cursor:"pointer",fontSize:10}}>🗑</button>
+              </div>
             </div>
             {sts.map((s,i)=>(
               <div key={s.id} style={{fontSize:11,padding:"3px 0",borderTop:i?"1px solid #F5F5F5":"none",display:"flex",justifyContent:"space-between"}}>
@@ -867,9 +999,9 @@ function AStudents({data,save,centerId}){
 }
 
 /* ADMIN RENEWALS — LTV Tracking + Retention Rate */
-function ARenewals({data,save}){
+function ARenewals({data,save,canEdit=true}){
   const[mo,setMo]=useState(mk());
-  const[view,setView]=useState("add");// add|ltv|rate
+  const[view,setView]=useState(canEdit?"add":"ltv");// add|ltv|rate
   const[form,setForm]=useState({teacherId:data.teachers[0]?.id||"",studentId:"",packageMonths:4,date:td(),amount:0,note:""});
   const allRenewals=data.renewals||[];
   const moRenewals=allRenewals.filter(r=>mk(r.date)===mo);
@@ -951,7 +1083,7 @@ function ARenewals({data,save}){
   return <div style={{padding:14}}>
     {/* View toggle */}
     <div style={{display:"flex",gap:4,marginBottom:12}}>
-      {[{k:"add",l:"+ Ghi nhận",icon:"📝"},{k:"ltv",l:"LTV HV",icon:"💎"},{k:"rate",l:"Tỷ lệ GV",icon:"📊"}].map(o=>(
+      {[{k:"add",l:"+ Ghi nhận",icon:"📝",edit:true},{k:"ltv",l:"LTV HV",icon:"💎"},{k:"rate",l:"Tỷ lệ GV",icon:"📊"}].filter(o=>canEdit||!o.edit).map(o=>(
         <button key={o.k} onClick={()=>setView(o.k)} style={{flex:1,padding:"10px 6px",borderRadius:10,border:`2px solid ${view===o.k?G:"#E2E8F0"}`,background:view===o.k?G:W,color:view===o.k?W:D,fontWeight:700,cursor:"pointer",fontSize:12}}>{o.icon} {o.l}</button>
       ))}
     </div>
@@ -1123,7 +1255,7 @@ function ARenewals({data,save}){
 }
 
 /* ADMIN REFERRALS */
-function ARefr({data,save}){
+function ARefr({data,save,canEdit=true}){
   const[mo,setMo]=useState(mk());
   const[form,setForm]=useState({teacherId:data.teachers[0]?.id||"",studentName:"",note:"",date:td()});
   const refs=(data.referrals||[]).filter(r=>mk(r.date)===mo);
@@ -1131,15 +1263,15 @@ function ARefr({data,save}){
   const rmR=id=>save({...data,referrals:(data.referrals||[]).filter(r=>r.id!==id)});
   return <div style={{padding:14}}>
     <input type="month" value={mo} onChange={e=>setMo(e.target.value)} style={{width:"100%",padding:"7px 12px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,fontWeight:600,marginBottom:12,boxSizing:"border-box"}}/>
-    <Card style={{border:`2px solid ${B}`}}>
+    {canEdit&&<Card style={{border:`2px solid ${B}`}}>
       <div style={{fontSize:13,fontWeight:700,color:B,marginBottom:8}}>🎯 Thêm Referral</div>
       <Sel label="GV giới thiệu" value={form.teacherId} onChange={v=>setForm(p=>({...p,teacherId:v}))} options={data.teachers.map(t=>({value:t.id,label:t.name}))}/>
       <Inp label="Tên HV mới" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))}/>
       <Inp label="Ghi chú" value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))}/>
       <Btn full onClick={addR} bg={G}>+ Thêm referral</Btn>
-    </Card>
+    </Card>}
     <Sec title={`Referral tháng ${mo} (${refs.length})`}>
-      {refs.map(r=>{const t=data.teachers.find(x=>x.id===r.teacherId);return <Card key={r.id} style={{padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontWeight:600,fontSize:12}}>HV: {r.studentName}</div><div style={{fontSize:11,color:"#888"}}>GV: {t?.name}{r.note&&` • ${r.note}`}</div></div><button onClick={()=>rmR(r.id)} style={{background:R+"10",border:"none",borderRadius:7,padding:"3px 8px",color:R,cursor:"pointer",fontSize:10}}>🗑</button></Card>;})}
+      {refs.map(r=>{const t=data.teachers.find(x=>x.id===r.teacherId);return <Card key={r.id} style={{padding:"8px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><div style={{fontWeight:600,fontSize:12}}>HV: {r.studentName}</div><div style={{fontSize:11,color:"#888"}}>GV: {t?.name}{r.note&&` • ${r.note}`}</div></div>{canEdit&&<button onClick={()=>rmR(r.id)} style={{background:R+"10",border:"none",borderRadius:7,padding:"3px 8px",color:R,cursor:"pointer",fontSize:10}}>🗑</button>}</Card>;})}
       {refs.length===0&&<div style={{color:"#888",textAlign:"center",padding:16,fontSize:12}}>Chưa có</div>}
     </Sec>
   </div>;
@@ -1525,9 +1657,8 @@ function APolicy({data,save}){
       const parsed=JSON.parse(importText);
       if(!parsed.teachers||!parsed.students){setSetupMsg("❌ File không hợp lệ (thiếu teachers/students).");return;}
       if(!window.confirm(`Import: ${parsed.teachers.length} GV, ${parsed.students.length} HV, ${(parsed.classes||[]).length} lớp.\n\n⚠️ SẼ GHI ĐÈ toàn bộ data hiện tại!`))return;
-      // Merge with defaults
       const merged={...initData(),...parsed,bonusPolicy:{...initData().bonusPolicy,...(parsed.bonusPolicy||{})},confirmations:{...(parsed.confirmations||{})}};
-      save(merged);setImportText("");setSetupMsg("✅ Import thành công!");setTimeout(()=>setSetupMsg(""),4000);
+      save(merged);setImportText("");setSetupMsg("✅ Import JSON thành công!");setTimeout(()=>setSetupMsg(""),4000);
     }catch(e){setSetupMsg("❌ JSON không hợp lệ: "+e.message);}
   };
   const handleFileUpload=(e)=>{
@@ -1535,6 +1666,96 @@ function APolicy({data,save}){
     const reader=new FileReader();
     reader.onload=(ev)=>{setImportText(ev.target.result);};
     reader.readAsText(file);
+  };
+  // === EXCEL IMPORT ===
+  const[xlsxPreview,setXlsxPreview]=useState(null);const[xlsxLoading,setXlsxLoading]=useState(false);
+  const handleExcelUpload=(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    setXlsxLoading(true);setSetupMsg("");
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      try{
+        const wb=XLSX.read(ev.target.result,{type:"array"});
+        const getSheet=(name)=>{const ws=wb.Sheets[name];return ws?XLSX.utils.sheet_to_json(ws,{defval:""}):[];};
+        const raw={
+          centers:getSheet("Trung tâm")||getSheet("Trung tam")||[],
+          teachers:getSheet("Giáo viên")||getSheet("Giao vien")||[],
+          students:getSheet("Học viên")||getSheet("Hoc vien")||[],
+          classes:getSheet("Lớp học")||getSheet("Lop hoc")||[],
+          policy:getSheet("Chính sách thưởng")||getSheet("Chinh sach thuong")||[],
+        };
+        // Map centers
+        const centers=raw.centers.filter(r=>r["ID (tự tạo)"]||r["ID"]).map(r=>({
+          id:String(r["ID (tự tạo)"]||r["ID"]||"").trim(),
+          name:String(r["Tên trung tâm"]||r["Tên"]||"").trim(),
+          type:String(r["Loại (b2c/b2b)"]||r["Loại"]||"b2c").trim().toLowerCase(),
+          address:String(r["Địa chỉ"]||"").trim(),
+          phone:String(r["SĐT"]||"").trim(),
+          note:String(r["Ghi chú"]||"").trim(),
+        }));
+        // Map teachers
+        const teachers=raw.teachers.filter(r=>r["ID"]||r["Họ tên"]).map(r=>{
+          const et=String(r["Loại\n(full/part)"]||r["Loại"]||"part").trim().toLowerCase();
+          return{
+            id:String(r["ID"]||"t"+Date.now()).trim(),
+            name:String(r["Họ tên"]||"").trim(),
+            phone:String(r["SĐT"]||"").trim(),
+            dob:String(r["Ngày sinh\n(YYYY-MM-DD)"]||r["Ngày sinh"]||"").trim(),
+            education:String(r["Học vấn"]||"").trim(),
+            cert:String(r["Chứng chỉ Y3K"]||"").trim(),
+            joinDate:String(r["Ngày vào\n(YYYY-MM-DD)"]||r["Ngày vào"]||td()).trim(),
+            employType:et==="full"?"full":"part",
+            status:String(r["Trạng thái\n(active/inactive)"]||r["Trạng thái"]||"active").trim().toLowerCase()==="inactive"?"inactive":"active",
+            fixedSalary:Number(r["Lương cố định\n(full only)"]||r["Lương cố định"]||0),
+            baselineSessions:Number(r["Baseline ca/th\n(full only)"]||r["Baseline"]||32),
+            salaryB2C:Number(r["Lương B2C/buổi"]||r["B2C"]||130000),
+            salaryB2B:Number(r["Lương B2B/buổi"]||r["B2B"]||110000),
+            otRateB2C:Number(r["OT B2C\n(full only)"]||r["OT B2C"]||0)||Number(r["Lương B2C/buổi"]||r["B2C"]||130000),
+            otRateB2B:Number(r["OT B2B\n(full only)"]||r["OT B2B"]||0)||Number(r["Lương B2B/buổi"]||r["B2B"]||110000),
+            level:String(r["Level\n(junior/standard/senior)"]||r["Level"]||"standard").trim(),
+            centerIds:String(r["Center IDs\n(cách bởi dấu ,)"]||r["Center IDs"]||"").split(",").map(s=>s.trim()).filter(Boolean),
+          };
+        });
+        // Map students
+        const students=raw.students.filter(r=>r["ID"]||r["Họ tên"]).map(r=>({
+          id:String(r["ID"]||"s"+Date.now()+Math.random().toString(36).slice(2,5)).trim(),
+          name:String(r["Họ tên"]||"").trim(),
+          gender:String(r["Giới tính"]||"").trim(),
+          dob:String(r["Ngày sinh\n(YYYY-MM-DD)"]||r["Ngày sinh"]||"").trim(),
+          parentName:String(r["Tên PH"]||"").trim(),
+          parentPhone:String(r["SĐT PH"]||"").trim(),
+          enrollDate:String(r["Ngày nhập học"]||td()).trim(),
+          expiryDate:String(r["Ngày hết khóa"]||"").trim(),
+          status:String(r["Trạng thái"]||"Đang học").trim(),
+          centerId:String(r["Center ID"]||"").trim(),
+          level:String(r["Level"]||"Level 1").trim(),
+          note:String(r["Ghi chú"]||"").trim(),
+          isTrial:String(r["Is Trial"]||"false").trim().toLowerCase()==="true",
+        }));
+        // Map classes
+        const classes=raw.classes.filter(r=>r["ID"]||r["Teacher ID"]).map(r=>({
+          id:String(r["ID"]||"cl"+Date.now()+Math.random().toString(36).slice(2,5)).trim(),
+          centerId:String(r["Center ID"]||"").trim(),
+          teacherId:String(r["Teacher ID"]||"").trim(),
+          day:Number(r["Thứ\n(0=CN,1=T2...6=T7)"]||r["Thứ"]||0),
+          caNumber:Number(r["Số ca"]||r["Ca"]||1),
+          startTime:String(r["Giờ bắt đầu"]||"09:00").trim(),
+          endTime:String(r["Giờ kết thúc"]||"10:30").trim(),
+          level:String(r["Level"]||"").trim(),
+          studentIds:String(r["HV IDs\n(cách bởi dấu ,)"]||r["HV IDs"]||"").split(",").map(s=>s.trim()).filter(Boolean),
+        }));
+        setXlsxPreview({centers,teachers,students,classes,policy:raw.policy});
+      }catch(err){setSetupMsg("❌ Lỗi đọc file Excel: "+err.message);}
+      setXlsxLoading(false);
+    };
+    reader.readAsArrayBuffer(file);
+  };
+  const confirmExcelImport=()=>{
+    if(!xlsxPreview)return;
+    const{centers,teachers,students,classes}=xlsxPreview;
+    if(!window.confirm(`Import từ Excel:\n• ${centers.length} Trung tâm\n• ${teachers.length} Giáo viên\n• ${students.length} Học viên\n• ${classes.length} Lớp học\n\n⚠️ SẼ GHI ĐÈ data hiện tại (giữ nguyên sessions, observations)?`))return;
+    const nd={...data,centers,teachers,students,classes,sessions:data.sessions||[],referrals:data.referrals||[],renewals:data.renewals||[],observations:data.observations||[],confirmations:data.confirmations||{}};
+    save(nd);setXlsxPreview(null);setSetupMsg("✅ Import Excel thành công! "+centers.length+" TT, "+teachers.length+" GV, "+students.length+" HV, "+classes.length+" lớp");setTimeout(()=>setSetupMsg(""),6000);
   };
 
   return <div style={{padding:14}}>
@@ -1594,13 +1815,47 @@ function APolicy({data,save}){
         </div>
 
         {showSetup&&<>
-          {/* Import JSON */}
+          {/* EXCEL IMPORT — PRIMARY */}
+          <div style={{marginBottom:12,padding:14,background:"linear-gradient(135deg,#F0FDF4,#ECFDF5)",borderRadius:12,border:`2px solid ${G}`}}>
+            <div style={{fontSize:13,fontWeight:800,color:G,marginBottom:6}}>📊 Import từ Excel (Khuyến nghị)</div>
+            <div style={{fontSize:10,color:"#666",marginBottom:8}}>Dùng file <strong>WowArt_Data_Template.xlsx</strong> để nhập GV, HV, lớp 1 lần. Nhanh hơn nhập tay!</div>
+            <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{fontSize:11,marginBottom:6,width:"100%"}}/>
+            {xlsxLoading&&<div style={{textAlign:"center",padding:10,color:B,fontSize:12}}>⏳ Đang đọc file...</div>}
+            {xlsxPreview&&<div style={{marginTop:8}}>
+              <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:6}}>✅ Đã đọc file — Xem trước:</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8}}>
+                {[
+                  {icon:"🏢",label:"Trung tâm",count:xlsxPreview.centers.length,items:xlsxPreview.centers.map(c=>c.name)},
+                  {icon:"👩‍🏫",label:"Giáo viên",count:xlsxPreview.teachers.length,items:xlsxPreview.teachers.map(t=>t.name)},
+                  {icon:"👶",label:"Học viên",count:xlsxPreview.students.length,items:xlsxPreview.students.slice(0,5).map(s=>s.name)},
+                  {icon:"📚",label:"Lớp học",count:xlsxPreview.classes.length,items:xlsxPreview.classes.map(c=>c.id)},
+                ].map((x,i)=><div key={i} style={{padding:8,background:"#fff",borderRadius:8,border:"1px solid #E2E8F0"}}>
+                  <div style={{fontSize:12,fontWeight:700}}>{x.icon} {x.count} {x.label}</div>
+                  <div style={{fontSize:9,color:"#888",marginTop:2}}>{x.items.join(", ")||(x.count===0?"(trống)":"...")}</div>
+                </div>)}
+              </div>
+              {xlsxPreview.teachers.length>0&&<div style={{fontSize:10,color:"#666",marginBottom:6,background:"#fff",padding:8,borderRadius:8}}>
+                <div style={{fontWeight:700,marginBottom:4}}>Chi tiết GV:</div>
+                {xlsxPreview.teachers.map((t,i)=><div key={i} style={{padding:"2px 0",borderBottom:"1px solid #F0F0F0"}}>
+                  {t.name} — {t.employType} — B2C: {(t.salaryB2C/1000).toFixed(0)}k — B2B: {(t.salaryB2B/1000).toFixed(0)}k — {t.phone}
+                </div>)}
+              </div>}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                <Btn full onClick={confirmExcelImport} bg={G} small>✅ Xác nhận Import</Btn>
+                <Btn full onClick={()=>setXlsxPreview(null)} bg="#94A3B8" small>❌ Hủy</Btn>
+              </div>
+            </div>}
+          </div>
+
+          {/* JSON IMPORT — BACKUP RESTORE */}
           <div style={{marginBottom:12,padding:12,background:"#F8FAFC",borderRadius:10}}>
-            <div style={{fontSize:11,fontWeight:700,color:B,marginBottom:6}}>📥 Import Data từ JSON</div>
-            <div style={{fontSize:10,color:"#888",marginBottom:6}}>Chọn file backup (.json) hoặc paste JSON vào ô bên dưới:</div>
+            <div style={{fontSize:11,fontWeight:700,color:B,marginBottom:6}}>📥 Khôi phục từ Backup (JSON)</div>
+            <div style={{fontSize:10,color:"#888",marginBottom:6}}>Dùng file backup JSON đã tải trước đó:</div>
             <input type="file" accept=".json" onChange={handleFileUpload} style={{fontSize:11,marginBottom:6,width:"100%"}}/>
-            <textarea value={importText} onChange={e=>setImportText(e.target.value)} placeholder='Paste JSON data ở đây...' style={{width:"100%",padding:8,borderRadius:8,border:"1.5px solid #E2E8F0",fontSize:10,minHeight:60,resize:"vertical",fontFamily:"monospace",boxSizing:"border-box"}}/>
-            <Btn full onClick={importJSON} bg={G} small disabled={!importText} style={{marginTop:6}}>📥 Import Data</Btn>
+            {importText&&<>
+              <div style={{fontSize:10,color:G,marginBottom:4}}>✅ File đã tải — bấm Import để khôi phục</div>
+              <Btn full onClick={importJSON} bg={B} small>📥 Import Backup</Btn>
+            </>}
           </div>
 
           {/* Reset options */}
@@ -1841,19 +2096,20 @@ function calcSalary(t,sessions,data,mo){
 }
 
 /* ADMIN PAYROLL */
-function APayroll({data,save}){
+function APayroll({data,save,canEdit=true,showBank=false,scopeCenterIds}){
   const[mo,setMo]=useState(mk());
+  const scopedTeachers=scopeCenterIds?data.teachers.filter(t=>(t.centerIds||[]).some(cid=>scopeCenterIds.includes(cid))):data.teachers;
 
   const calcT=t=>{
     const ss=data.sessions.filter(s=>s.teacherId===t.id&&mk(s.date)===mo);
     return calcSalary(t,ss,data,mo);
   };
-  const fullTs=data.teachers.filter(t=>(t.employType||"part")==="full");
-  const partTs=data.teachers.filter(t=>(t.employType||"part")==="part");
-  const grandTotal=data.teachers.reduce((a,t)=>a+calcT(t).total,0);
+  const fullTs=scopedTeachers.filter(t=>(t.employType||"part")==="full");
+  const partTs=scopedTeachers.filter(t=>(t.employType||"part")==="part");
+  const grandTotal=scopedTeachers.reduce((a,t)=>a+calcT(t).total,0);
   const fullTotal=fullTs.reduce((a,t)=>a+calcT(t).total,0);
   const partTotal=partTs.reduce((a,t)=>a+calcT(t).total,0);
-  const confirmed=data.teachers.filter(t=>data.confirmations[`${t.id}_${mo}`]).length;
+  const confirmed=scopedTeachers.filter(t=>data.confirmations[`${t.id}_${mo}`]).length;
 
   const exportXLS=()=>{
     const rows=[
@@ -1916,6 +2172,12 @@ function APayroll({data,save}){
           <span style={{fontWeight:800,color:accent,fontSize:13}}>TỔNG</span>
           <span style={{fontWeight:800,color:accent,fontSize:15}}>{fmt(c.total)}</span>
         </div>
+        {showBank&&<div style={{marginTop:6,padding:6,background:"#F0FDF4",borderRadius:6,fontSize:10,color:"#059669"}}>
+          🏦 {t.bankName||"—"} • STK: {t.bankAccount||"—"} • {t.bankHolder||"—"}
+        </div>}
+        {canEdit&&<div style={{marginTop:6}}>
+          <button onClick={()=>{const nd={...data,confirmations:{...data.confirmations,[ck]:isC?null:new Date().toISOString()}};save(nd);}} style={{width:"100%",padding:"6px 0",borderRadius:8,border:`1.5px solid ${isC?G:"#E2E8F0"}`,background:isC?G+"10":W,color:isC?G:"#888",fontSize:11,fontWeight:700,cursor:"pointer"}}>{isC?"✓ Đã XN — Bấm để hủy":"Xác nhận lương"}</button>
+        </div>}
       </div>
     </Card>;
   };
@@ -1952,8 +2214,71 @@ function APayroll({data,save}){
         <span>👔 Full: {fmt(fullTotal)}</span>
         <span>⏰ Part: {fmt(partTotal)}</span>
       </div>
-      <div style={{fontSize:11,opacity:.7,marginTop:3}}>{confirmed}/{data.teachers.length} GV đã xác nhận</div>
+      <div style={{fontSize:11,opacity:.7,marginTop:3}}>{confirmed}/{scopedTeachers.length} GV đã xác nhận</div>
     </div>
+  </div>;
+}
+
+/* USER MANAGEMENT (CEO ONLY) */
+function AUsers({data,save}){
+  const[show,setShow]=useState(false);const[edit,setEdit]=useState(null);
+  const roleOpts=[{value:"ceo",label:"👑 CEO"},{value:"admin_center",label:"📋 Admin Center"},{value:"academic",label:"🎓 Academic Manager"},{value:"accountant",label:"💰 Kế toán"}];
+  const empty={name:"",role:"admin_center",password:"",centerIds:[]};
+  const[form,setForm]=useState(empty);const f=(k,v)=>setForm(p=>({...p,[k]:v}));
+  const doSave=()=>{
+    if(!form.name||!form.password)return alert("Nhập đủ tên và mật khẩu");
+    const users=data.users||[];
+    if(edit)save({...data,users:users.map(u=>u.id===edit?{...u,...form}:u)});
+    else save({...data,users:[...users,{...form,id:"u_"+uid()}]});
+    setShow(false);setEdit(null);setForm(empty);
+  };
+  const startEdit=u=>{setForm({name:u.name,role:u.role,password:u.password,centerIds:u.centerIds||[]});setEdit(u.id);setShow(true);};
+  const users=data.users||[];
+
+  return <div style={{padding:14}}>
+    <Sec title={`👥 Quản lý Users (${users.length})`} action={<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}>
+      {show&&<Card style={{border:`2px solid #7C3AED`,marginBottom:14}}>
+        <Inp label="Tên hiển thị *" value={form.name} onChange={e=>f("name",e.target.value)} placeholder="VD: Admin Tân Phú"/>
+        <Sel label="Vai trò" value={form.role} onChange={v=>f("role",v)} options={roleOpts}/>
+        <Inp label="Mật khẩu *" value={form.password} onChange={e=>f("password",e.target.value)} placeholder="VD: tp@789"/>
+        {form.role==="admin_center"&&<div style={{marginBottom:8}}>
+          <label style={{fontSize:11,fontWeight:600,color:"#666",display:"block",marginBottom:3}}>Gán Center (Admin Center)</label>
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{data.centers.map(c=>(
+            <button key={c.id} onClick={()=>f("centerIds",form.centerIds.includes(c.id)?form.centerIds.filter(x=>x!==c.id):[...form.centerIds,c.id])} style={{padding:"5px 10px",borderRadius:7,border:`1.5px solid ${form.centerIds.includes(c.id)?B:"#E2E8F0"}`,background:form.centerIds.includes(c.id)?B+"10":W,fontWeight:600,fontSize:11,cursor:"pointer",color:form.centerIds.includes(c.id)?B:"#888"}}>
+              {c.type==="b2b"?"🏫":"🏠"} {c.name} ({c.id})
+            </button>
+          ))}</div>
+        </div>}
+        <div style={{display:"flex",gap:6}}><Btn full onClick={doSave} bg={G}>{edit?"Lưu":"Thêm"}</Btn><Btn full onClick={()=>{setShow(false);setEdit(null);}} bg="#E2E8F0" color="#666">Hủy</Btn></div>
+      </Card>}
+
+      {users.map(u=>{
+        const rc={ceo:{icon:"👑",color:"#1a1a2e"},admin_center:{icon:"📋",color:B},academic:{icon:"🎓",color:"#7C3AED"},accountant:{icon:"💰",color:"#059669"}}[u.role]||{icon:"👤",color:"#888"};
+        return <Card key={u.id} style={{padding:"10px 12px",borderLeft:`3px solid ${rc.color}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:13}}>{rc.icon} {u.name}</div>
+              <div style={{fontSize:10,color:"#888"}}>
+                ID: {u.id} • Pass: {u.password}
+                {u.centerIds?.length>0&&<span> • Centers: {u.centerIds.join(", ")}</span>}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:4}}>
+              <button onClick={()=>startEdit(u)} style={{background:B+"10",border:"none",borderRadius:7,padding:"5px 10px",color:B,cursor:"pointer",fontSize:11}}>✏️</button>
+              <button onClick={()=>{if(confirm(`Xóa user ${u.name}?`))save({...data,users:users.filter(x=>x.id!==u.id)});}} style={{background:R+"10",border:"none",borderRadius:7,padding:"5px 10px",color:R,cursor:"pointer",fontSize:11}}>🗑</button>
+            </div>
+          </div>
+        </Card>;
+      })}
+    </Sec>
+
+    {/* Password guide */}
+    <Card style={{padding:12,background:"#FFFBEB",border:"1px solid #FDE68A"}}>
+      <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:4}}>📋 Danh sách đăng nhập</div>
+      {users.map(u=><div key={u.id} style={{fontSize:11,padding:"3px 0",borderBottom:"1px solid #FDE68A"}}>{u.name}: <strong>{u.password}</strong>{u.centerIds?.length?` (${u.centerIds.join(",")})`:""}
+      </div>)}
+      <div style={{fontSize:10,color:"#92400E",marginTop:6}}>⚠️ Gửi mật khẩu riêng cho từng người. Không công khai!</div>
+    </Card>
   </div>;
 }
 
