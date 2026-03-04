@@ -212,7 +212,7 @@ export default function App(){
 
   // Tab configs per role
   const ceoTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"}];
-  const allTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"users",label:"Users",icon:"👥"}];
+  const allTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"import",label:"Import",icon:"📤"},{key:"users",label:"Users",icon:"👥"}];
   const admTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"payroll",label:"Bảng lương",icon:"💰"}];
   const acaTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"obs",label:"Dự giờ",icon:"👁"},{key:"payroll",label:"Xem lương",icon:"💰"}];
   const accTabs=[{key:"payroll",label:"Bảng lương",icon:"💰"}];
@@ -261,6 +261,7 @@ export default function App(){
           {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={true}/>}
           {tab==="referrals"&&<ARefr data={data} save={save} canEdit={true}/>}
           {tab==="policy"&&<APolicy data={data} save={save}/>}
+          {tab==="import"&&<APolicy data={data} save={save} showImportOnly={true}/>}
           {tab==="payroll"&&<APayroll data={data} save={save} canEdit={true} showBank={true}/>}
           {tab==="users"&&<AUsers data={data} save={save}/>}
         </>}
@@ -630,6 +631,7 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
 
     {/* ===== FILTERS (show in overview mode) ===== */}
     {report==="overview"&&<>
+    <Card style={{marginBottom:14,padding:"10px 12px"}}>
       <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:8}}>🔍 Bộ lọc</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
         <div><label style={{fontSize:10,fontWeight:600,color:"#888"}}>Tháng</label><input type="month" value={fMo} onChange={e=>setFMo(e.target.value)} style={{width:"100%",padding:"6px 8px",borderRadius:7,border:"1.5px solid #E2E8F0",fontSize:12,boxSizing:"border-box"}}/></div>
@@ -750,7 +752,8 @@ function ATeachers({data,save,canEdit=true,fullData,scopeCenterIds}){
   const scopedTeachers=scopeCenterIds?data.teachers.filter(t=>(t.centerIds||[]).some(cid=>scopeCenterIds.includes(cid))):data.teachers;
   const scopedCenters=scopeCenterIds?data.centers.filter(c=>scopeCenterIds.includes(c.id)):data.centers;
   const[show,setShow]=useState(false);const[edit,setEdit]=useState(null);
-  const empty={name:"",phone:"",dob:"",education:"",certificate:"",joinDate:td(),employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:150000,otRateB2B:130000,salaryB2C:150000,salaryB2B:130000,level:"standard",centerIds:[scopedCenters[0]?.id||data.centers[0]?.id],bankName:"",bankAccount:"",bankHolder:""};
+  const defaultCid=scopedCenters[0]?.id||data.centers[0]?.id||"";
+  const empty={name:"",phone:"",dob:"",education:"",certificate:"",joinDate:td(),employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:150000,otRateB2B:130000,salaryB2C:150000,salaryB2B:130000,level:"standard",centerIds:defaultCid?[defaultCid]:[],bankName:"",bankAccount:"",bankHolder:""};
   const[form,setForm]=useState(empty);const f=(k,v)=>setForm(p=>({...p,[k]:v}));
   const isFull=form.employType==="full";
   const doSave=()=>{
@@ -1782,7 +1785,7 @@ function AObs({data,save}){
 }
 
 /* ADMIN POLICY */
-function APolicy({data,save}){
+function APolicy({data,save,showImportOnly=false}){
   const[p,setP]=useState({...data.bonusPolicy});const[saved,setSaved]=useState(false);
   const[showSetup,setShowSetup]=useState(false);const[importText,setImportText]=useState("");const[setupMsg,setSetupMsg]=useState("");
   // Sync when data changes externally
@@ -1917,7 +1920,7 @@ function APolicy({data,save}){
   };
 
   return <div style={{padding:14}}>
-    <Sec title="⚙️ Chính sách thưởng / phạt">
+    {!showImportOnly&&<Sec title="⚙️ Chính sách thưởng / phạt">
       <Card style={{border:`2px solid ${G}`,marginBottom:12}}>
         <div style={{fontSize:13,fontWeight:800,color:G,marginBottom:10}}>🎁 A — THƯỞNG</div>
         <Inp label="HV tái đăng ký (đ/bé)" type="number" value={p.renewalBonus} onChange={e=>f("renewalBonus",e.target.value)}/>
@@ -1949,7 +1952,7 @@ function APolicy({data,save}){
         </div>
       </Card>
       <Btn full onClick={doSave} bg={saved?G:B}>{saved?"✓ Đã lưu thành công":"💾 Lưu chính sách"}</Btn>
-    </Sec>
+    </Sec>}
 
     {/* ADMIN SETUP & TOOLS */}
     <Sec title="🔧 Admin Setup & Tools">
@@ -2459,59 +2462,62 @@ function AUsers({data,save}){
   </div>;
 }
 
-/* TEACHER ATTENDANCE */
+/* TEACHER ATTENDANCE — Agenda-based */
 function TAtt({data,save,user}){
-  // Show all locations where teacher has classes assigned
   const myAllClasses=data.classes.filter(c=>c.teacherId===user.id);
   const myLocIds=[...new Set(myAllClasses.map(c=>c.centerId))];
   const myLocs=myLocIds.map(lid=>data.centers.find(c=>c.id===lid)).filter(Boolean);
-  const[cid,setCid]=useState(myLocs[0]?.id||"");
-  const curLoc=data.centers.find(c=>c.id===cid);
-  const locType=curLoc?.type||"b2c";
-
-  const myClasses=data.classes.filter(c=>c.teacherId===user.id&&c.centerId===cid);
-  const todaySessions=data.sessions.filter(s=>s.teacherId===user.id&&s.date===td());
-  const activeSession=todaySessions.find(s=>s.checkIn&&!s.checkOut);
-  const[selClass,setSelClass]=useState(myClasses[0]?.id||"");
+  const[selDate,setSelDate]=useState(td());
+  const[viewMo,setViewMo]=useState(mk());
   const[extraName,setExtraName]=useState("");const[extraType,setExtraType]=useState("trial");
-  const[report,setReport]=useState("");
-  const[lessonPrepped,setLessonPrepped]=useState(false);
-  const[lessonPrepImg,setLessonPrepImg]=useState("");// base64 thumbnail
-
-  // FIX #11: Track session count for Full-time baseline display
+  const[report,setReport]=useState({});// {sessionId:text}
+  const[lessonPrepped,setLessonPrepped]=useState({});// {classId:bool}
   const isFull=(user.employType||"part")==="full";
-  const moSessions=data.sessions.filter(s=>s.teacherId===user.id&&mk(s.date)===mk()&&s.checkIn&&s.checkOut);
-  const moCount=moSessions.length;
+  const moSessions=data.sessions.filter(s=>s.teacherId===user.id&&mk(s.date)===viewMo&&s.checkIn&&s.checkOut);
   const baseline=user.baselineSessions||32;
 
-  const handlePrepImg=(e)=>{
-    const file=e.target.files?.[0];if(!file)return;
-    if(file.size>2*1024*1024)return alert("Ảnh tối đa 2MB");
-    const reader=new FileReader();
-    reader.onload=()=>{
-      // Resize to thumbnail ~400px wide to save Firebase space
-      const img=new Image();
-      img.onload=()=>{
-        const canvas=document.createElement("canvas");
-        const maxW=400;const scale=Math.min(maxW/img.width,1);
-        canvas.width=img.width*scale;canvas.height=img.height*scale;
-        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
-        setLessonPrepImg(canvas.toDataURL("image/jpeg",0.7));
-      };
-      img.src=reader.result;
-    };
-    reader.readAsDataURL(file);
+  // Classes for selected date (by day of week)
+  const selDayOfWeek=new Date(selDate).getDay();
+  const classesForDay=myAllClasses.filter(c=>c.day===selDayOfWeek);
+  // Sessions for selected date
+  const sessionsForDate=data.sessions.filter(s=>s.teacherId===user.id&&s.date===selDate);
+
+  // Build agenda: each class → its session (if any)
+  const agenda=classesForDay.map(cl=>{
+    const loc=data.centers.find(c=>c.id===cl.centerId);
+    const session=sessionsForDate.find(s=>s.classId===cl.id);
+    const activeStudentIds=cl.studentIds.filter(sid=>{
+      const st=data.students.find(s=>s.id===sid);
+      return st&&(st.status==="Đang học"||st.status==="Trial");
+    });
+    return {cl,loc,session,activeStudentIds,locType:loc?.type||"b2c"};
+  }).sort((a,b)=>{
+    const ta=a.cl.startTime||"00:00",tb=b.cl.startTime||"00:00";
+    return ta.localeCompare(tb);
+  });
+
+  // Calendar dots: which days in month have classes
+  const daysInMo=()=>{
+    const[y,m]=viewMo.split("-").map(Number);
+    const d=new Date(y,m,0).getDate();
+    const result=[];
+    for(let i=1;i<=d;i++){
+      const dt=`${viewMo}-${String(i).padStart(2,"0")}`;
+      const dow=new Date(dt).getDay();
+      const hasClass=myAllClasses.some(c=>c.day===dow);
+      const sessions=data.sessions.filter(s=>s.teacherId===user.id&&s.date===dt);
+      const allDone=hasClass&&myAllClasses.filter(c=>c.day===dow).every(c=>sessions.some(s=>s.classId===c.id&&s.checkOut));
+      const hasActive=sessions.some(s=>s.checkIn&&!s.checkOut);
+      result.push({dt,day:i,dow,hasClass,sessionCount:sessions.length,allDone,hasActive,isToday:dt===td(),isSel:dt===selDate});
+    }
+    return result;
   };
 
-  const checkIn=()=>{
-    const cl=myClasses.find(c=>c.id===selClass);if(!cl)return alert("Chọn ca dạy");
-    if(!lessonPrepped)return alert("Vui lòng xác nhận đã soạn bài trước khi check-in!");
-    const duplicate=todaySessions.find(s=>s.classId===selClass&&s.checkOut);
-    if(duplicate)return alert("Bạn đã check-in ca này hôm nay rồi! Không thể check-in trùng.");
-    const today=new Date().getDay();
-    if(cl.day!==today){
-      if(!confirm(`Ca này lịch là ${DAYS_FULL[cl.day]} nhưng hôm nay là ${DAYS_FULL[today]}.\nBạn muốn check-in dạy bù?`))return;
-    }
+  const doCheckIn=(cl,locType)=>{
+    const cid=cl.centerId;
+    if(!lessonPrepped[cl.id])return alert("Vui lòng xác nhận đã soạn bài trước khi check-in!");
+    const existing=sessionsForDate.find(s=>s.classId===cl.id);
+    if(existing)return alert("Ca này đã check-in rồi!");
     const activeStudentIds=cl.studentIds.filter(sid=>{
       const st=data.students.find(s=>s.id===sid);
       return st&&(st.status==="Đang học"||st.status==="Trial");
@@ -2520,139 +2526,189 @@ function TAtt({data,save,user}){
       const st=data.students.find(s=>s.id===sid);
       return {studentId:sid,name:st?.name||"?",present:true,isTrial:st?.status==="Trial",isMakeup:false,converted:false};
     });
-    const session={id:uid(),teacherId:user.id,classId:selClass,centerId:cid,date:td(),type:locType,checkIn:new Date().toISOString(),checkOut:null,classStartTime:cl.startTime,attendance,reportSent:false,reportNote:"",lessonPrepped:true,lessonPrepImg:lessonPrepImg||""};
+    const session={id:uid(),teacherId:user.id,classId:cl.id,centerId:cid,date:selDate,type:locType,checkIn:new Date().toISOString(),checkOut:null,classStartTime:cl.startTime,attendance,reportSent:false,reportNote:"",lessonPrepped:true};
     save({...data,sessions:[...data.sessions,session]});
-    setLessonPrepped(false);setLessonPrepImg("");
+    setLessonPrepped(p=>({...p,[cl.id]:false}));
   };
-  const checkOut=()=>{
-    if(!activeSession)return;
-    save({...data,sessions:data.sessions.map(s=>s.id===activeSession.id?{...s,checkOut:new Date().toISOString(),reportSent:!!report||!!activeSession.reportNote,reportNote:report||activeSession.reportNote}:s)});
-    setReport("");
+
+  const doCheckOut=(session)=>{
+    const rpt=report[session.id]||session.reportNote||"";
+    save({...data,sessions:data.sessions.map(s=>s.id===session.id?{...s,checkOut:new Date().toISOString(),reportSent:!!rpt,reportNote:rpt}:s)});
+    setReport(p=>{const n={...p};delete n[session.id];return n;});
   };
-  const toggleAtt=sid=>{if(!activeSession)return;save({...data,sessions:data.sessions.map(s=>s.id===activeSession.id?{...s,attendance:(s.attendance||[]).map(a=>a.studentId===sid?{...a,present:!a.present}:a)}:s)});};
-  const toggleConv=sid=>{if(!activeSession)return;save({...data,sessions:data.sessions.map(s=>s.id===activeSession.id?{...s,attendance:(s.attendance||[]).map(a=>a.studentId===sid?{...a,converted:!a.converted}:a)}:s)});};
-  const addExtra=()=>{
-    if(!extraName||!activeSession)return;
+
+  const toggleAtt=(sesId,sid)=>{
+    save({...data,sessions:data.sessions.map(s=>s.id===sesId?{...s,attendance:(s.attendance||[]).map(a=>a.studentId===sid?{...a,present:!a.present}:a)}:s)});
+  };
+  const toggleConv=(sesId,sid)=>{
+    save({...data,sessions:data.sessions.map(s=>s.id===sesId?{...s,attendance:(s.attendance||[]).map(a=>a.studentId===sid?{...a,converted:!a.converted}:a)}:s)});
+  };
+  const addExtra=(sesId)=>{
+    if(!extraName)return;
     const na={studentId:uid(),name:extraName,present:true,isTrial:extraType==="trial",isMakeup:extraType==="makeup",converted:false};
-    save({...data,sessions:data.sessions.map(s=>s.id===activeSession.id?{...s,attendance:[...(s.attendance||[]),na]}:s)});
+    save({...data,sessions:data.sessions.map(s=>s.id===sesId?{...s,attendance:[...(s.attendance||[]),na]}:s)});
     setExtraName("");
   };
 
+  const calDays=daysInMo();
+  const firstDow=calDays[0]?.dow||0;
+
   return <div style={{padding:14}}>
-    {/* Location selector - show all assigned locations */}
-    {myLocs.length>1&&<div style={{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"}}>
-      {myLocs.map(c=>(
-        <button key={c.id} onClick={()=>{setCid(c.id);setSelClass("");}} style={{
-          padding:"7px 10px",borderRadius:9,
-          border:`2px solid ${cid===c.id?(c.type==="b2b"?"#7C3AED":B):"#E2E8F0"}`,
-          background:cid===c.id?(c.type==="b2b"?"#7C3AED":B):W,
-          color:cid===c.id?W:D,fontWeight:600,cursor:"pointer",fontSize:11
-        }}>
-          {c.type==="b2b"?"🏫":"🏠"} {c.name}
-        </button>
-      ))}
-    </div>}
+    {/* Month nav + baseline */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <button onClick={()=>{const[y,m]=viewMo.split("-").map(Number);const nm=m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,"0")}`;setViewMo(nm);}} style={{background:B+"10",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:14,color:B}}>◀</button>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:14,fontWeight:800,color:D}}>{viewMo}</div>
+        {isFull&&<div style={{fontSize:10,color:moSessions.length>=baseline?G:"#B45309",fontWeight:600}}>Ca: {moSessions.length}/{baseline} {moSessions.length>=baseline?"✅ Đủ baseline":"⏳"}</div>}
+        {!isFull&&<div style={{fontSize:10,color:"#888"}}>Tổng ca: {moSessions.length}</div>}
+      </div>
+      <button onClick={()=>{const[y,m]=viewMo.split("-").map(Number);const nm=m===12?`${y+1}-01`:`${y}-${String(m+1).padStart(2,"0")}`;setViewMo(nm);}} style={{background:B+"10",border:"none",borderRadius:8,padding:"6px 12px",cursor:"pointer",fontSize:14,color:B}}>▶</button>
+    </div>
 
-    {/* Single location indicator */}
-    {myLocs.length===1&&curLoc&&<div style={{
-      background:curLoc.type==="b2b"?"#7C3AED10":B+"08",
-      borderRadius:8,padding:"6px 12px",marginBottom:10,fontSize:12,fontWeight:600,
-      color:curLoc.type==="b2b"?"#7C3AED":B
-    }}>
-      {curLoc.type==="b2b"?"🏫":"🏠"} {curLoc.name} ({curLoc.type.toUpperCase()})
-    </div>}
-
-    {!activeSession?(
-      <>
-        <div style={{background:B+"08",borderRadius:14,padding:18,marginBottom:14,textAlign:"center"}}>
-          <div style={{fontSize:36,marginBottom:6}}>⚪</div>
-          <div style={{fontSize:16,fontWeight:700,color:D}}>Chưa check-in</div>
-        </div>
-        <Card>
-          <Sel label="Ca dạy" value={selClass} onChange={v=>setSelClass(v)} options={[{value:"",label:"-- Chọn ca --"},...myClasses.map(c=>{
-            const sts=c.studentIds.map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
-            const activeCount=sts.filter(s=>s.status==="Đang học"||s.status==="Trial").length;
-            return {value:c.id,label:`${DAYS_FULL[c.day]} — Ca ${c.caNumber} (${c.startTime}-${c.endTime}) • ${c.classLevel} • ${activeCount} HV`};
-          })]}/>
-          <div style={{fontSize:11,color:locType==="b2b"?"#7C3AED":B,fontWeight:600,marginBottom:8,padding:"4px 10px",background:locType==="b2b"?"#7C3AED10":B+"08",borderRadius:6,display:"inline-block"}}>
-            {locType==="b2b"?"🏫 B2B — Tại trường":"🏠 B2C — Tại trung tâm"}
-            {isFull?` • Lương cố định: ${fmt(user.fixedSalary||0)}/th`:` • Lương: ${fmt(locType==="b2b"?user.salaryB2B:user.salaryB2C)}/buổi`}
-          </div>
-          {/* FIX #11: Show baseline counter for Full-time */}
-          {isFull&&<div style={{fontSize:11,padding:"4px 10px",background:moCount>=baseline?"#22C55E10":"#F4C42D10",borderRadius:6,marginBottom:8,fontWeight:600,color:moCount>=baseline?"#22C55E":"#B45309"}}>
-            📊 Ca tháng này: {moCount}/{baseline} {moCount>=baseline?`✓ Đủ baseline! Ca tiếp theo = OT (${fmt(locType==="b2b"?(user.otRateB2B||0):(user.otRateB2C||0))}/buổi)`:`— còn ${baseline-moCount} ca nữa`}
-          </div>}
-          {selClass&&<>
-            <div style={{fontSize:11,fontWeight:600,color:"#888",marginBottom:4}}>Danh sách lớp:</div>
-            {myClasses.find(c=>c.id===selClass)?.studentIds.map(sid=>{
-              const s=data.students.find(x=>x.id===sid);if(!s)return null;
-              return <div key={sid} style={{fontSize:12,padding:"3px 0",color:"#555"}}>• {s.name} ({s.gender}•{s.studentLevel}) — PH: {s.parentName} — <span style={{color:s.status==="Đang học"?G:s.status==="Trial"?B:R,fontWeight:600,fontSize:10}}>{s.status}</span></div>;
-            })}
-          </>}
-          {/* LESSON PREP CHECK */}
-          <div style={{background:"#FFFBEB",border:"2px solid #F4C42D",borderRadius:10,padding:12,marginTop:10}}>
-            <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:8}}>📝 Xác nhận soạn bài</div>
-            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:8}}>
-              <input type="checkbox" checked={lessonPrepped} onChange={e=>setLessonPrepped(e.target.checked)} style={{width:20,height:20,accentColor:G}}/>
-              <span style={{fontSize:13,fontWeight:600,color:lessonPrepped?G:"#92400E"}}>{lessonPrepped?"✅ Đã soạn bài":"Tôi đã soạn bài cho buổi dạy hôm nay"}</span>
-            </label>
-            <div style={{fontSize:11,color:"#888",marginBottom:6}}>Đính kèm ảnh bài soạn (không bắt buộc):</div>
-            <input type="file" accept="image/*" capture="environment" onChange={handlePrepImg} style={{fontSize:11,marginBottom:4}}/>
-            {lessonPrepImg&&<div style={{marginTop:6}}>
-              <img src={lessonPrepImg} alt="Bài soạn" style={{maxWidth:"100%",maxHeight:200,borderRadius:8,border:"1px solid #E5E7EB"}}/>
-              <button onClick={()=>setLessonPrepImg("")} style={{fontSize:10,color:R,background:"none",border:"none",cursor:"pointer",marginTop:2}}>🗑 Xóa ảnh</button>
+    {/* Mini calendar */}
+    <Card style={{marginBottom:14,padding:"10px 8px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,textAlign:"center",marginBottom:4}}>
+        {["CN","T2","T3","T4","T5","T6","T7"].map(d=><div key={d} style={{fontSize:9,fontWeight:700,color:"#888",padding:2}}>{d}</div>)}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,textAlign:"center"}}>
+        {Array(firstDow).fill(null).map((_,i)=><div key={`e${i}`}/>)}
+        {calDays.map(d=>(
+          <button key={d.dt} onClick={()=>setSelDate(d.dt)} style={{
+            padding:"6px 2px",borderRadius:8,border:d.isSel?`2px solid ${B}`:"2px solid transparent",
+            background:d.isSel?B+"15":d.isToday?"#FEF3C7":d.allDone?G+"10":d.hasActive?O+"15":W,
+            cursor:"pointer",position:"relative",fontSize:11,fontWeight:d.isSel||d.isToday?800:500,
+            color:d.isSel?B:d.isToday?"#92400E":D
+          }}>
+            {d.day}
+            {d.hasClass&&<div style={{position:"absolute",bottom:1,left:"50%",transform:"translateX(-50%)",display:"flex",gap:1}}>
+              {d.allDone&&<span style={{width:4,height:4,borderRadius:2,background:G}}/>}
+              {d.hasActive&&<span style={{width:4,height:4,borderRadius:2,background:O}}/>}
+              {!d.allDone&&!d.hasActive&&d.sessionCount>0&&<span style={{width:4,height:4,borderRadius:2,background:B}}/>}
+              {!d.allDone&&!d.hasActive&&d.sessionCount===0&&d.hasClass&&<span style={{width:4,height:4,borderRadius:2,background:"#CBD5E1"}}/>}
             </div>}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:6,fontSize:9,color:"#888"}}>
+        <span>🟢 Hoàn thành</span><span>🟠 Đang dạy</span><span>🔵 Có ca</span><span>⚪ Trống</span>
+      </div>
+    </Card>
+
+    {/* Selected date header */}
+    <div style={{fontSize:13,fontWeight:700,color:D,marginBottom:8}}>
+      📅 {DAYS_FULL[selDayOfWeek]} — {selDate}{selDate===td()&&<Badge bg={O+"15"} color={O} style={{marginLeft:6}}>Hôm nay</Badge>}
+      <span style={{fontSize:11,fontWeight:400,color:"#888",marginLeft:8}}>{classesForDay.length} ca</span>
+    </div>
+
+    {/* No classes */}
+    {classesForDay.length===0&&<Card style={{textAlign:"center",padding:20}}>
+      <div style={{fontSize:28,marginBottom:6}}>😊</div>
+      <div style={{fontSize:13,color:"#888"}}>Không có ca dạy ngày này</div>
+    </Card>}
+
+    {/* Agenda: each class */}
+    {agenda.map(({cl,loc,session,activeStudentIds,locType})=>{
+      const isCheckedIn=session&&session.checkIn&&!session.checkOut;
+      const isDone=session&&session.checkOut;
+      const notStarted=!session;
+      const accent=locType==="b2b"?"#7C3AED":B;
+      const salaryLabel=isFull?`Cố định ${fmt(user.fixedSalary||0)}/th`:`${fmt(locType==="b2b"?user.salaryB2B:user.salaryB2C)}/buổi`;
+
+      return <Card key={cl.id} style={{marginBottom:12,borderLeft:`4px solid ${isDone?G:isCheckedIn?O:accent}`,overflow:"hidden"}}>
+        {/* Class header */}
+        <div style={{padding:"10px 12px",background:isDone?G+"08":isCheckedIn?O+"08":accent+"06"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <span style={{fontWeight:700,fontSize:13}}>Ca {cl.caNumber} ({cl.startTime}-{cl.endTime})</span>
+              <Badge bg={accent+"12"} color={accent} style={{marginLeft:6}}>{cl.classLevel}</Badge>
+            </div>
+            <Badge bg={isDone?G+"15":isCheckedIn?O+"15":"#F1F5F9"} color={isDone?G:isCheckedIn?O:"#888"}>
+              {isDone?"✅ Done":isCheckedIn?"🟢 Đang dạy":"⚪ Chưa"}
+            </Badge>
           </div>
-          <Btn full onClick={checkIn} style={{marginTop:10}}>⏰ CHECK-IN</Btn>
-        </Card>
-      </>
-    ):(
-      <>
-        <div style={{background:`linear-gradient(135deg,${G},#16A34A)`,borderRadius:14,padding:16,marginBottom:14,textAlign:"center",color:W}}>
-          <div style={{fontSize:32}}>🟢</div>
-          <div style={{fontSize:16,fontWeight:700}}>Đang dạy</div>
-          <div style={{fontSize:12,opacity:.9}}>Check-in lúc {fmtT(activeSession.checkIn)} • {activeSession.type.toUpperCase()}</div>
+          <div style={{fontSize:10,color:"#888",marginTop:2}}>
+            {loc?.type==="b2b"?"🏫":"🏠"} {loc?.name} • {activeStudentIds.length} HV • {salaryLabel}
+          </div>
         </div>
-        <Card>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>📋 Điểm danh ({(activeSession.attendance||[]).filter(a=>a.present).length}/{(activeSession.attendance||[]).length})</div>
-          {(activeSession.attendance||[]).map(a=>(
-            <div key={a.studentId} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #F5F5F5"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <button onClick={()=>toggleAtt(a.studentId)} style={{width:28,height:28,borderRadius:7,border:"none",cursor:"pointer",background:a.present?G:"#F1F5F9",color:a.present?W:"#CBD5E1",fontSize:14,fontWeight:700}}>{a.present?"✓":"✗"}</button>
-                <div>
-                  <div style={{fontWeight:600,fontSize:12,color:a.present?D:"#CBD5E1"}}>{a.name}</div>
-                  <div style={{display:"flex",gap:4}}>{a.isTrial&&<span style={{fontSize:9,color:O,fontWeight:600}}>🌟 Trial</span>}{a.isMakeup&&<span style={{fontSize:9,color:B,fontWeight:600}}>🔄 Học bù</span>}</div>
+
+        <div style={{padding:"10px 12px"}}>
+          {/* NOT STARTED — show prep + check-in */}
+          {notStarted&&<>
+            <div style={{fontSize:11,fontWeight:600,color:"#888",marginBottom:4}}>Danh sách HV:</div>
+            {activeStudentIds.map(sid=>{
+              const s=data.students.find(x=>x.id===sid);if(!s)return null;
+              return <div key={sid} style={{fontSize:11,padding:"2px 0",color:"#555"}}>• {s.name} <span style={{fontSize:9,color:s.status==="Trial"?O:G}}>{s.status==="Trial"?"🌟 Trial":""}</span></div>;
+            })}
+            <div style={{background:"#FFFBEB",border:"1.5px solid #F4C42D",borderRadius:8,padding:10,marginTop:8}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+                <input type="checkbox" checked={lessonPrepped[cl.id]||false} onChange={e=>setLessonPrepped(p=>({...p,[cl.id]:e.target.checked}))} style={{width:18,height:18,accentColor:G}}/>
+                <span style={{fontSize:12,fontWeight:600,color:lessonPrepped[cl.id]?G:"#92400E"}}>{lessonPrepped[cl.id]?"✅ Đã soạn bài":"📝 Xác nhận đã soạn bài"}</span>
+              </label>
+            </div>
+            <Btn full onClick={()=>doCheckIn(cl,locType)} bg={accent} style={{marginTop:8}}>⏰ CHECK-IN Ca {cl.caNumber}</Btn>
+          </>}
+
+          {/* CHECKED IN — show attendance + report + checkout */}
+          {isCheckedIn&&<>
+            <div style={{fontSize:12,fontWeight:700,marginBottom:6}}>📋 Điểm danh ({(session.attendance||[]).filter(a=>a.present).length}/{(session.attendance||[]).length})</div>
+            {(session.attendance||[]).map(a=>(
+              <div key={a.studentId} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid #F5F5F5"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <button onClick={()=>toggleAtt(session.id,a.studentId)} style={{width:26,height:26,borderRadius:6,border:"none",cursor:"pointer",background:a.present?G:"#F1F5F9",color:a.present?W:"#CBD5E1",fontSize:12,fontWeight:700}}>{a.present?"✓":"✗"}</button>
+                  <div>
+                    <span style={{fontWeight:600,fontSize:11,color:a.present?D:"#CBD5E1"}}>{a.name}</span>
+                    {a.isTrial&&<span style={{fontSize:9,color:O,fontWeight:600,marginLeft:4}}>🌟 Trial</span>}
+                    {a.isMakeup&&<span style={{fontSize:9,color:B,fontWeight:600,marginLeft:4}}>🔄 Bù</span>}
+                  </div>
                 </div>
+                {a.isTrial&&<button onClick={()=>toggleConv(session.id,a.studentId)} style={{padding:"2px 6px",borderRadius:6,border:"none",cursor:"pointer",fontSize:9,fontWeight:600,background:a.converted?G+"12":"#F1F5F9",color:a.converted?G:"#888"}}>{a.converted?"✓ Chốt":"Chốt ĐK"}</button>}
               </div>
-              {a.isTrial&&<button onClick={()=>toggleConv(a.studentId)} style={{padding:"3px 8px",borderRadius:7,border:"none",cursor:"pointer",fontSize:10,fontWeight:600,background:a.converted?G+"12":"#F1F5F9",color:a.converted?G:"#888"}}>{a.converted?"✓ Chốt":"Chốt ĐK"}</button>}
+            ))}
+            {/* Add extra student */}
+            <div style={{marginTop:8,paddingTop:6,borderTop:"1.5px dashed #E2E8F0"}}>
+              <div style={{display:"flex",gap:4,marginBottom:4}}>
+                {[{k:"trial",l:"🌟 Trial"},{k:"makeup",l:"🔄 Học bù"}].map(o=><button key={o.k} onClick={()=>setExtraType(o.k)} style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${extraType===o.k?O:"#E2E8F0"}`,background:extraType===o.k?O+"10":W,fontSize:9,fontWeight:600,cursor:"pointer",color:extraType===o.k?O:"#888"}}>{o.l}</button>)}
+              </div>
+              <div style={{display:"flex",gap:4}}>
+                <input value={extraName} onChange={e=>setExtraName(e.target.value)} placeholder="Tên bé thêm..." style={{flex:1,padding:"5px 8px",borderRadius:6,border:"1.5px solid #E2E8F0",fontSize:11}} onKeyDown={e=>e.key==="Enter"&&addExtra(session.id)}/>
+                <Btn small onClick={()=>addExtra(session.id)}>+</Btn>
+              </div>
             </div>
-          ))}
-          <div style={{marginTop:10,paddingTop:8,borderTop:"2px dashed #E2E8F0"}}>
-            <div style={{fontSize:11,fontWeight:600,color:"#888",marginBottom:4}}>Thêm bé</div>
-            <div style={{display:"flex",gap:4,marginBottom:6}}>
-              {[{k:"trial",l:"🌟 Trial"},{k:"makeup",l:"🔄 Học bù"}].map(o=><button key={o.k} onClick={()=>setExtraType(o.k)} style={{flex:1,padding:5,borderRadius:7,border:`1.5px solid ${extraType===o.k?O:"#E2E8F0"}`,background:extraType===o.k?O+"10":W,fontSize:10,fontWeight:600,cursor:"pointer",color:extraType===o.k?O:"#888"}}>{o.l}</button>)}
+            {/* Report + Checkout */}
+            <textarea value={report[session.id]||session.reportNote||""} onChange={e=>setReport(p=>({...p,[session.id]:e.target.value}))} placeholder="Ghi chú buổi dạy (nếu có)..." style={{width:"100%",padding:8,borderRadius:8,border:"1.5px solid #E2E8F0",fontSize:11,minHeight:40,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box",marginTop:8}}/>
+            <Btn full bg={R} onClick={()=>doCheckOut(session)} style={{marginTop:6}}>🔴 CHECK-OUT Ca {cl.caNumber}</Btn>
+          </>}
+
+          {/* DONE — summary */}
+          {isDone&&<div style={{fontSize:11,color:"#666"}}>
+            <div>⏰ {fmtT(session.checkIn)} → {fmtT(session.checkOut)}</div>
+            <div>👥 {(session.attendance||[]).filter(a=>a.present).length}/{(session.attendance||[]).length} HV có mặt
+              {session.lessonPrepped&&<span style={{color:G,marginLeft:4}}>📝✓</span>}
             </div>
-            <div style={{display:"flex",gap:4}}>
-              <input value={extraName} onChange={e=>setExtraName(e.target.value)} placeholder="Tên bé..." style={{flex:1,padding:"7px 10px",borderRadius:7,border:"1.5px solid #E2E8F0",fontSize:12}} onKeyDown={e=>e.key==="Enter"&&addExtra()}/>
-              <Btn small onClick={addExtra}>+</Btn>
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:6}}>📝 Báo cáo lớp học</div>
-          <textarea value={report||activeSession.reportNote||""} onChange={e=>setReport(e.target.value)} placeholder="Vấn đề cần lưu ý về HV / PH / trung tâm..." style={{width:"100%",padding:8,borderRadius:8,border:"1.5px solid #E2E8F0",fontSize:12,minHeight:50,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/>
-        </Card>
-        <Btn full bg={R} onClick={checkOut}>🔴 CHECK-OUT & GỬI BÁO CÁO</Btn>
-      </>
-    )}
-    {todaySessions.filter(s=>s.checkOut).length>0&&<Sec title="Đã hoàn thành">
-      {todaySessions.filter(s=>s.checkOut).map(s=>(
-        <Card key={s.id} style={{padding:"8px 12px"}}>
-          <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontWeight:600,fontSize:12}}>{s.type.toUpperCase()} • {fmtT(s.checkIn)}→{fmtT(s.checkOut)}</span><span style={{fontSize:11,color:"#888"}}>{(s.attendance||[]).filter(a=>a.present).length}/{(s.attendance||[]).length} HV</span></div>
-          {s.reportNote&&<div style={{fontSize:11,color:"#666",marginTop:2}}>📝 {s.reportNote}</div>}
-        </Card>
-      ))}
-    </Sec>}
+            {session.reportNote&&<div style={{marginTop:2,color:"#888"}}>📝 {session.reportNote}</div>}
+          </div>}
+        </div>
+      </Card>;
+    })}
+
+    {/* Month summary */}
+    <Card style={{marginTop:10,background:"#F8FAFC"}}>
+      <div style={{fontSize:12,fontWeight:700,color:D,marginBottom:6}}>📊 Tổng kết tháng {viewMo}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+        <div style={{textAlign:"center",padding:6,background:B+"08",borderRadius:8}}>
+          <div style={{fontSize:18,fontWeight:800,color:B}}>{moSessions.length}</div>
+          <div style={{fontSize:9,color:"#888"}}>Buổi dạy</div>
+        </div>
+        <div style={{textAlign:"center",padding:6,background:G+"08",borderRadius:8}}>
+          <div style={{fontSize:18,fontWeight:800,color:G}}>{moSessions.length>0?Math.round(moSessions.filter(s=>s.lessonPrepped).length/moSessions.length*100):0}%</div>
+          <div style={{fontSize:9,color:"#888"}}>Soạn bài</div>
+        </div>
+        <div style={{textAlign:"center",padding:6,background:O+"08",borderRadius:8}}>
+          <div style={{fontSize:18,fontWeight:800,color:O}}>{moSessions.reduce((a,s)=>{const att=s.attendance||[];return a+(att.length?Math.round(att.filter(x=>x.present).length/att.length*100):0);},0)/(moSessions.length||1)|0}%</div>
+          <div style={{fontSize:9,color:"#888"}}>Chuyên cần TB</div>
+        </div>
+      </div>
+    </Card>
   </div>;
 }
 
