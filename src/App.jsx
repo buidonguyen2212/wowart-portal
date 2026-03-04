@@ -167,6 +167,10 @@ export default function App(){
       parsed.centers=(parsed.centers||[]).map(c=>({...c,type:c.type||"b2c"}));
       parsed.teachers=(parsed.teachers||[]).map(t=>({...t,employType:t.employType||"part",status:t.status||"active",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B,bankName:t.bankName||"",bankAccount:t.bankAccount||"",bankHolder:t.bankHolder||""}));
       parsed.users=parsed.users||initData().users;
+      // Migration: ensure admin_all role exists
+      if(!parsed.users.find(u=>u.role==="admin_all")){
+        parsed.users.push({id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wowart@789"});
+      }
       parsed.students=parsed.students||[];
       parsed.classes=parsed.classes||[];
       parsed.sessions=parsed.sessions||[];
@@ -449,6 +453,8 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
     let onTime=0,totCI=0;
     allSS.forEach(s=>{if(s.checkIn&&s.classStartTime){totCI++;const ci=new Date(s.checkIn),ciM=ci.getHours()*60+ci.getMinutes(),csM=parseTime(s.classStartTime);if(ciM<=csM)onTime++;}});
     const onTimeRate=totCI?Math.round(onTime/totCI*100):0;
+    const prepCount=allSS.filter(s=>s.lessonPrepped).length;
+    const prepRate=allSS.length?Math.round(prepCount/allSS.length*100):0;
     const tStudentIds=[...new Set(tClasses.flatMap(cl=>cl.studentIds))];
     const qEnd=new Date(now.getFullYear(),Math.ceil((now.getMonth()+1)/3)*3,0);
     const expiring=tStudentIds.filter(sid=>{const st=data.students.find(s=>s.id===sid);return st?.expiryDate&&new Date(st.expiryDate)<=qEnd;}).length;
@@ -463,7 +469,7 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
         </div>
       </div>
       <div style={{padding:"10px 12px"}}>
-        <div style={{display:"grid",gridTemplateColumns:isFull?"1fr 1fr 1fr":"1fr 1fr 1fr",gap:6,marginBottom:10}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:6,marginBottom:10}}>
           {isFull&&<div style={{textAlign:"center",padding:6,background:completionRate>=100?G+"08":completionRate>=80?"#FFF7ED":"#FEF2F2",borderRadius:8}}>
             <div style={{fontSize:16,fontWeight:800,color:completionRate>=100?G:completionRate>=80?O:R}}>{completionRate}%</div>
             <div style={{fontSize:9,color:"#888"}}>Ca ({c.sessionCount}/{c.baselineSessions})</div>
@@ -475,6 +481,10 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
           <div style={{textAlign:"center",padding:6,background:onTimeRate>=90?G+"08":O+"08",borderRadius:8}}>
             <div style={{fontSize:16,fontWeight:800,color:onTimeRate>=90?G:O}}>{onTimeRate}%</div>
             <div style={{fontSize:9,color:"#888"}}>Đúng giờ</div>
+          </div>
+          <div style={{textAlign:"center",padding:6,background:prepRate>=90?G+"08":prepRate>=70?"#FFF7ED":"#FEF2F2",borderRadius:8}}>
+            <div style={{fontSize:16,fontWeight:800,color:prepRate>=90?G:prepRate>=70?O:R}}>{prepRate}%</div>
+            <div style={{fontSize:9,color:"#888"}}>Soạn bài ({prepCount}/{allSS.length})</div>
           </div>
           {!isFull&&<div style={{textAlign:"center",padding:6,background:roi>=2?G+"08":roi>=1?"#FFF7ED":"#FEF2F2",borderRadius:8}}>
             <div style={{fontSize:16,fontWeight:800,color:roi>=2?G:roi>=1?O:R}}>{roi}x</div>
@@ -518,11 +528,13 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
       const noCheckout=ts.filter(s=>s.checkIn&&!s.checkOut).length;
       const unconfirmed=data.teachers.filter(t=>!data.confirmations[`${t.id}_${fMo}`]).length;
       const lowAtt=filteredTs.filter(t=>{const c=calcT(t);return c.avgAtt>0&&c.avgAtt<80;}).length;
+      const lowPrep=filteredTs.filter(t=>{const ss=data.sessions.filter(s=>s.teacherId===t.id&&s.checkOut&&mk(s.date)===fMo);const pr=ss.length?Math.round(ss.filter(s=>s.lessonPrepped).length/ss.length*100):0;return ss.length>0&&pr<90;}).length;
       const chips=[
         {k:"overview",l:"📊 Tổng quan",count:null,color:B},
         {k:"expiry",l:"⏰ Hết hạn",count:hvExpiry7+hvExpiry30,color:hvExpiry7>0?R:O},
         {k:"noCheckout",l:"🔴 Chưa checkout",count:noCheckout,color:noCheckout>0?R:"#888"},
         {k:"lowAtt",l:"📉 Chuyên cần thấp",count:lowAtt,color:lowAtt>0?O:"#888"},
+        {k:"lowPrep",l:"📝 Soạn bài thấp",count:lowPrep,color:lowPrep>0?O:"#888"},
         {k:"unconfirmed",l:"⏳ Chưa XN lương",count:unconfirmed,color:unconfirmed>0?O:"#888"},
       ];
       return <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:14,paddingBottom:4}}>
@@ -585,6 +597,22 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
         </div>;
       })}
       {filteredTs.filter(t=>{const c=calcT(t);return c.avgAtt>0&&c.avgAtt<80;}).length===0&&<div style={{color:G,textAlign:"center",fontSize:12}}>✅ Tất cả GV trên 80%</div>}
+    </Card>}
+
+    {/* ===== REPORT: LOW PREP RATE ===== */}
+    {report==="lowPrep"&&<Card style={{marginBottom:14,border:`2px solid ${O}`}}>
+      <div style={{fontSize:13,fontWeight:700,color:O,marginBottom:8}}>📝 GV có tỷ lệ soạn bài dưới 90% — Tháng {fMo}</div>
+      {filteredTs.map(t=>{
+        const ss=data.sessions.filter(s=>s.teacherId===t.id&&s.checkOut&&mk(s.date)===fMo);
+        const prepped=ss.filter(s=>s.lessonPrepped).length;
+        const pr=ss.length?Math.round(prepped/ss.length*100):0;
+        if(ss.length===0||pr>=90)return null;
+        return <div key={t.id} style={{fontSize:12,padding:"6px 0",borderBottom:"1px solid #FDE68A",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><span style={{fontWeight:600}}>{t.name}</span> <span style={{color:"#888",fontSize:10}}>({ss.length} buổi)</span></div>
+          <Badge bg={pr<70?R+"12":O+"12"} color={pr<70?R:O}>{prepped}/{ss.length} soạn bài ({pr}%)</Badge>
+        </div>;
+      }).filter(Boolean)}
+      {filteredTs.filter(t=>{const ss=data.sessions.filter(s=>s.teacherId===t.id&&s.checkOut&&mk(s.date)===fMo);const pr=ss.length?Math.round(ss.filter(s=>s.lessonPrepped).length/ss.length*100):0;return ss.length>0&&pr<90;}).length===0&&<div style={{color:G,textAlign:"center",fontSize:12}}>✅ Tất cả GV soạn bài trên 90%</div>}
     </Card>}
 
     {/* ===== REPORT: UNCONFIRMED SALARY ===== */}
