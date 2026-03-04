@@ -146,9 +146,17 @@ export default function App(){
     // Real-time listener — all devices sync automatically
     const unsub=onDataChange((val)=>{
       const parsed={...val};
-      if(!parsed.renewals)parsed.renewals=[];
+      // Firebase strips empty arrays — restore defaults
       parsed.centers=(parsed.centers||[]).map(c=>({...c,type:c.type||"b2c"}));
       parsed.teachers=(parsed.teachers||[]).map(t=>({...t,employType:t.employType||"part",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B}));
+      parsed.students=parsed.students||[];
+      parsed.classes=parsed.classes||[];
+      parsed.sessions=parsed.sessions||[];
+      parsed.renewals=parsed.renewals||[];
+      parsed.referrals=parsed.referrals||[];
+      parsed.observations=parsed.observations||[];
+      parsed.confirmations=parsed.confirmations||{};
+      parsed.bonusPolicy=parsed.bonusPolicy||initData().bonusPolicy;
       setData(parsed);setLoading(false);
     });
     // Init if empty
