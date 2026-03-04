@@ -87,10 +87,11 @@ const calcObs=(scores,liets)=>{
 const initData=()=>({
   users:[
     {id:"u_ceo",name:"CEO / Group Manager",role:"ceo",password:"wowart@789"},
-    {id:"u_am",name:"Academic Manager",role:"academic",password:"academic@789",centerIds:[]},
-    {id:"u_adm_q7",name:"Admin Q7",role:"admin_center",password:"q7@789",centerIds:["c1"]},
-    {id:"u_adm_tp",name:"Admin Tân Phú",role:"admin_center",password:"tp@789",centerIds:["c2"]},
-    {id:"u_kt",name:"Kế toán",role:"accountant",password:"ketoan@789"},
+    {id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wowart@789"},
+    {id:"u_am",name:"Academic Manager",role:"academic",password:"wowart@789",centerIds:[]},
+    {id:"u_adm_q7",name:"Admin Q7",role:"admin_center",password:"wowart@789",centerIds:["c1"]},
+    {id:"u_adm_tp",name:"Admin Tân Phú",role:"admin_center",password:"wowart@789",centerIds:["c2"]},
+    {id:"u_kt",name:"Kế toán",role:"accountant",password:"wowart@789"},
   ],
   centers:[
     {id:"c1",name:"Q7",type:"b2c"},
@@ -117,7 +118,17 @@ const initData=()=>({
   referrals:[],
   renewals:[],
   observations:[],
-  bonusPolicy:{obsBonus:500000,kpiAttThreshold:85,kpiAttBonus:100000,retentionBonus4:200000,retentionBonus6:400000,retentionBonus12:600000,referralBonus:300000,referralQBonus:500000,trialConvertBonus:300000},
+  bonusPolicy:{
+    renewalBonus:200000,// HV TĐK: 200k/bé
+    kpiAttThreshold:95,kpiAttBonus:100000,// Chuyên cần HV ≥95%: 100k/tháng
+    trialBringBonus:100000,// Dẫn 1 HV học thử: 100k/bé
+    trialConvertBonus:500000,// HV học thử → ĐK chính thức: 500k/bé
+    trialTeachBonus:100000,// Dạy HT thành công (bé đóng tiền): 100k/bé
+    referralBonus:100000,referralQBonus:500000,// legacy compat
+    obsBonus:500000,// Dự giờ đạt ≥80%: 500k/quý
+    latePenalty2:50000,// Đi trễ lần 2: trừ 50k/ca
+    latePenalty3:100000,// Đi trễ lần 3+: trừ 100k/ca
+  },
   confirmations:{},
 });
 
@@ -130,7 +141,7 @@ function Sel({label,options,value,onChange}){return <div style={{marginBottom:8}
 function Badge({children,bg=B+"15",color:c=B}){return <span style={{fontSize:10,padding:"2px 8px",borderRadius:16,background:bg,color:c,fontWeight:600,whiteSpace:"nowrap"}}>{children}</span>;}
 function Sec({title,children,action}){return <div style={{marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{fontSize:14,fontWeight:700,color:D}}>{title}</div>{action}</div>{children}</div>;}
 function StatC({label,value,hi,warn}){return <div style={{background:W,borderRadius:11,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,.04)",borderLeft:`4px solid ${warn?O:hi?G:"#E2E8F0"}`}}><div style={{fontSize:18,fontWeight:800,color:warn?O:hi?G:D}}>{value}</div><div style={{fontSize:10,color:"#888",marginTop:1}}>{label}</div></div>;}
-function Row({l,v,border=true}){return <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:12,borderBottom:border?"1px solid #F8F8F8":"none"}}><span style={{color:"#666"}}>{l}</span><span style={{fontWeight:600,color:v&&v!=="0đ"?D:"#CBD5E1"}}>{v}</span></div>;}
+function Row({l,v,border=true,color}){return <div style={{display:"flex",justifyContent:"space-between",padding:"5px 0",fontSize:12,borderBottom:border?"1px solid #F8F8F8":"none"}}><span style={{color:color||"#666"}}>{l}</span><span style={{fontWeight:600,color:color||(v&&v!=="0đ"?D:"#CBD5E1")}}>{v}</span></div>;}
 
 const getQuarter=(dateStr)=>{const d=new Date(dateStr);return`Q${Math.floor(d.getMonth()/3)+1}-${d.getFullYear()}`;};
 const currentQuarter=()=>getQuarter(td());
@@ -171,42 +182,41 @@ export default function App(){
   },[]);
   const save=async nd=>{setData(nd);try{await saveData(nd);}catch(e){console.error("Firebase save error:",e);}};
 
-  // Filter data by center for admin_center role
-  const scopedData=(user&&user.role==="admin_center"&&user.centerIds)?{
-    ...data,
-    centers:data.centers.filter(c=>user.centerIds.includes(c.id)),
-    teachers:data.teachers.filter(t=>(t.centerIds||[]).some(cid=>user.centerIds.includes(cid))),
-    students:data.students.filter(s=>user.centerIds.includes(s.centerId)),
-    classes:data.classes.filter(cl=>user.centerIds.includes(cl.centerId)),
-    sessions:data.sessions.filter(s=>{const cl=data.classes.find(c=>c.id===s.classId);return cl&&user.centerIds.includes(cl.centerId);}),
-    renewals:data.renewals.filter(r=>{const s=data.students.find(st=>st.id===r.studentId);return s&&user.centerIds.includes(s.centerId);}),
-    referrals:data.referrals.filter(r=>{const s=data.students.find(st=>st.id===r.newStudentId);return s&&user.centerIds.includes(s.centerId);}),
-    observations:data.observations.filter(o=>{const t=data.teachers.find(te=>te.id===o.teacherId);return t&&(t.centerIds||[]).some(cid=>user.centerIds.includes(cid));}),
-  }:data;
-
   if(loading)return <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",background:BG}}><div style={{textAlign:"center"}}><div style={{fontSize:36,fontWeight:900,color:B}}>WOW ART</div><div style={{color:"#888",marginTop:8}}>Đang tải...</div></div></div>;
   if(!role)return <RoleSelect onSelect={(r,u)=>{setRole(r);setUser(u);setTab(r==="teacher"?"attendance":"dashboard");}}/>;
   if(role&&!user)return <StaffLogin data={data} roleType={role} onLogin={u=>{setUser(u);setTab(role==="teacher"?"attendance":"dashboard");}} onBack={()=>setRole(null)}/>;
 
   const logout=()=>{setRole(null);setUser(null);setTab("");};
+  const[showChgPw,setShowChgPw]=useState(false);
+  const[cpOld,setCpOld]=useState("");const[cpNew,setCpNew]=useState("");const[cpCfm,setCpCfm]=useState("");const[cpMsg,setCpMsg]=useState("");
+  const changeStaffPw=()=>{
+    if(!R_TCH){// staff user
+      const u=(data.users||[]).find(x=>x.id===user.id);
+      if(!u||cpOld!==u.password){setCpMsg("❌ Mật khẩu cũ không đúng");return;}
+      if(cpNew.length<4){setCpMsg("❌ Tối thiểu 4 ký tự");return;}
+      if(cpNew!==cpCfm){setCpMsg("❌ Xác nhận không khớp");return;}
+      save({...data,users:data.users.map(x=>x.id===user.id?{...x,password:cpNew}:x)});
+      setCpMsg("✅ Đã đổi thành công!");setCpOld("");setCpNew("");setCpCfm("");setTimeout(()=>setShowChgPw(false),1500);
+    }
+  };
   const R_CEO=role==="ceo";
+  const R_ALL=role==="admin_all";
   const R_ADM=role==="admin_center";
   const R_ACA=role==="academic";
   const R_ACC=role==="accountant";
   const R_TCH=role==="teacher";
-  const viewData=R_ADM?scopedData:data;
-  const canEdit=R_CEO||R_ADM;// only CEO + Admin Center can edit
 
   // Tab configs per role
-  const ceoTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"users",label:"Users",icon:"👥"}];
+  const ceoTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"}];
+  const allTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"users",label:"Users",icon:"👥"}];
   const admTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"payroll",label:"Bảng lương",icon:"💰"}];
   const acaTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"obs",label:"Dự giờ",icon:"👁"},{key:"payroll",label:"Xem lương",icon:"💰"}];
   const accTabs=[{key:"payroll",label:"Bảng lương",icon:"💰"}];
-  const teacherTabs=[{key:"attendance",label:"Điểm danh",icon:"📋"},{key:"schedule",label:"Lịch dạy",icon:"📅"},{key:"history",label:"Lịch sử",icon:"🕐"},{key:"salary",label:"Lương",icon:"💰"},{key:"profile",label:"Hồ sơ",icon:"👤"}];
-  const tabs=R_CEO?ceoTabs:R_ADM?admTabs:R_ACA?acaTabs:R_ACC?accTabs:teacherTabs;
+  const teacherTabs=[{key:"attendance",label:"Điểm danh",icon:"📋"},{key:"schedule",label:"Lịch dạy",icon:"📅"},{key:"history",label:"Lịch sử",icon:"🕐"},{key:"salary",label:"Lương",icon:"💰"},{key:"policy",label:"Quy định",icon:"📜"},{key:"profile",label:"Hồ sơ",icon:"👤"}];
+  const tabs=R_CEO?ceoTabs:R_ALL?allTabs:R_ADM?admTabs:R_ACA?acaTabs:R_ACC?accTabs:teacherTabs;
 
-  const roleLabel=R_CEO?"👑 CEO":R_ADM?`📋 ${user.name}`:R_ACA?"🎓 Academic":R_ACC?"💰 Kế toán":user?.name;
-  const headerBg=R_CEO?"#1a1a2e":R_ADM?B:R_ACA?"#7C3AED":R_ACC?"#059669":B;
+  const roleLabel=R_CEO?"👑 CEO":R_ALL?"🔑 Admin Tổng":R_ADM?`📋 ${user.name}`:R_ACA?"🎓 Academic":R_ACC?"💰 Kế toán":user?.name;
+  const headerBg=R_CEO?"#1a1a2e":R_ALL?"#7C3AED":R_ADM?B:R_ACA?"#059669":R_ACC?"#D97706":B;
 
   return(
     <div style={{minHeight:"100vh",background:BG,fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
@@ -214,12 +224,32 @@ export default function App(){
         <div><span style={{fontWeight:800,fontSize:17}}>WOW ART</span><span style={{fontSize:10,opacity:.8,marginLeft:6}}>Portal</span></div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <Badge bg="rgba(255,255,255,.2)" color={W}>{roleLabel}</Badge>
+          {!R_TCH&&<button onClick={()=>setShowChgPw(!showChgPw)} style={{background:"rgba(255,255,255,.2)",border:"none",color:W,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:11}}>🔐</button>}
           <button onClick={logout} style={{background:"rgba(255,255,255,.2)",border:"none",color:W,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:11}}>Thoát</button>
         </div>
       </div>
+      {/* Staff password change popup */}
+      {showChgPw&&!R_TCH&&<div style={{padding:14,background:"#FEF3C7",borderBottom:"2px solid #F4C42D"}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#92400E",marginBottom:8}}>🔐 Đổi mật khẩu — {user.name}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+          <Inp label="Mật khẩu cũ" type="password" value={cpOld} onChange={e=>setCpOld(e.target.value)} placeholder="Hiện tại"/>
+          <Inp label="Mật khẩu mới" type="password" value={cpNew} onChange={e=>setCpNew(e.target.value)} placeholder="≥4 ký tự"/>
+          <Inp label="Xác nhận" type="password" value={cpCfm} onChange={e=>setCpCfm(e.target.value)} placeholder="Nhập lại"/>
+        </div>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <Btn small onClick={changeStaffPw} bg={G}>Đổi</Btn>
+          <Btn small onClick={()=>{setShowChgPw(false);setCpMsg("");}} bg="#E2E8F0" color="#666">Đóng</Btn>
+          {cpMsg&&<span style={{fontSize:11,fontWeight:600,color:cpMsg.includes("✅")?G:R}}>{cpMsg}</span>}
+        </div>
+      </div>}
       <div style={{padding:"0 0 85px 0"}}>
-        {/* CEO — sees everything except obs */}
+        {/* CEO — Dashboard + AI only (read-only overview) */}
         {R_CEO&&<>
+          {tab==="dashboard"&&<ADash data={data} save={save} canEdit={false}/>}
+          {tab==="ai"&&<AAIAgent data={data}/>}
+        </>}
+        {/* Admin Tổng — toàn quyền tất cả center kể cả B2B */}
+        {R_ALL&&<>
           {tab==="dashboard"&&<ADash data={data} save={save} canEdit={true}/>}
           {tab==="ai"&&<AAIAgent data={data}/>}
           {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={true}/>}
@@ -227,10 +257,10 @@ export default function App(){
           {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={true}/>}
           {tab==="referrals"&&<ARefr data={data} save={save} canEdit={true}/>}
           {tab==="policy"&&<APolicy data={data} save={save}/>}
-          {tab==="payroll"&&<APayroll data={data} save={save} canEdit={true}/>}
+          {tab==="payroll"&&<APayroll data={data} save={save} canEdit={true} showBank={true}/>}
           {tab==="users"&&<AUsers data={data} save={save}/>}
         </>}
-        {/* Admin Center — full data but UI restricted to assigned centers */}
+        {/* Admin Center — scoped to assigned centers */}
         {R_ADM&&<>
           {tab==="dashboard"&&<ADash data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
           {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
@@ -260,7 +290,8 @@ export default function App(){
           {tab==="schedule"&&<TSchedule data={data} user={user}/>}
           {tab==="history"&&<THist data={data} user={user}/>}
           {tab==="salary"&&<TSalary data={data} save={save} user={user}/>}
-          {tab==="profile"&&<TProf data={data} user={user}/>}
+          {tab==="policy"&&<TPolicyView data={data}/>}
+          {tab==="profile"&&<TProf data={data} save={save} user={user}/>}
         </>}
       </div>
       <div style={{position:"fixed",bottom:0,left:0,right:0,background:W,borderTop:"1px solid #E2E8F0",display:"flex",overflowX:"auto",padding:"3px 0 6px",zIndex:100}}>
@@ -277,10 +308,11 @@ export default function App(){
 /* LOGIN */
 function RoleSelect({onSelect}){
   const roles=[
-    {key:"ceo",label:"CEO / Group Manager",icon:"👑",desc:"Xem tổng thể, quản lý users",color:"#1a1a2e"},
+    {key:"ceo",label:"CEO / Group Manager",icon:"👑",desc:"Dashboard tổng thể + AI phân tích",color:"#1a1a2e"},
+    {key:"admin_all",label:"Admin Tổng",icon:"🔑",desc:"Toàn quyền vận hành, kể cả B2B",color:"#7C3AED"},
     {key:"admin_center",label:"Admin Center",icon:"📋",desc:"Quản lý center được gán",color:B},
-    {key:"academic",label:"Academic Manager",icon:"🎓",desc:"Dự giờ, báo cáo, phân tích",color:"#7C3AED"},
-    {key:"accountant",label:"Kế toán",icon:"💰",desc:"Xem bảng lương & chuyển khoản",color:"#059669"},
+    {key:"academic",label:"Academic Manager",icon:"🎓",desc:"Dự giờ, báo cáo, phân tích",color:"#059669"},
+    {key:"accountant",label:"Kế toán",icon:"💰",desc:"Xem bảng lương & chuyển khoản",color:"#D97706"},
     {key:"teacher",label:"Giáo viên",icon:"👩‍🏫",desc:"Điểm danh, lịch dạy, lương",color:B},
   ];
   return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${B},#2980B9)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
@@ -301,12 +333,12 @@ function StaffLogin({data,roleType,onLogin,onBack}){
   
   if(roleType==="teacher"){
     const activeTeachers=data.teachers.filter(t=>(t.status||"active")==="active");
-    const go=()=>{const t=activeTeachers.find(x=>x.id===selected);if(!t){setErr("Chọn giáo viên");return;}if(pass!==t.phone){setErr("Sai số điện thoại");return;}onLogin({...t,role:"teacher"});};
+    const go=()=>{const t=activeTeachers.find(x=>x.id===selected);if(!t){setErr("Chọn giáo viên");return;}if(pass!==(t.password||t.phone)){setErr("Sai mật khẩu");return;}onLogin({...t,role:"teacher"});};
     return <div style={{minHeight:"100vh",background:`linear-gradient(135deg,${B},#2980B9)`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
       <Card style={{maxWidth:360,width:"100%",padding:"32px 24px",boxShadow:"0 20px 60px rgba(0,0,0,.3)",borderRadius:20}}>
         <div style={{textAlign:"center",marginBottom:20}}><span style={{fontSize:36}}>👩‍🏫</span><div style={{fontSize:17,fontWeight:700,marginTop:6}}>Đăng nhập Giáo viên</div></div>
-        <Sel label="Chọn tên" value={selected} onChange={v=>{setSelected(v);setErr("");}} options={[{value:"",label:"-- Chọn giáo viên --"},...activeTeachers.map(t=>({value:t.id,label:`${t.name} (${t.id.toUpperCase()})`}))]}/>
-        <div style={{position:"relative"}}><Inp label="Mật khẩu (số di động)" type={showPass?"text":"password"} value={pass} onChange={e=>{setPass(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Nhập SĐT..."/>
+        <Sel label="Chọn tên" value={selected} onChange={v=>{setSelected(v);setErr("");}} options={[{value:"",label:"-- Chọn giáo viên --"},...activeTeachers.map(t=>({value:t.id,label:`${t.name}`}))]}/>
+        <div style={{position:"relative"}}><Inp label="Mật khẩu" type={showPass?"text":"password"} value={pass} onChange={e=>{setPass(e.target.value);setErr("");}} onKeyDown={e=>e.key==="Enter"&&go()} placeholder="Nhập mật khẩu..."/>
           <button onClick={()=>setShowPass(!showPass)} style={{position:"absolute",right:8,top:26,background:"none",border:"none",cursor:"pointer",fontSize:14}}>{showPass?"🙈":"👁"}</button>
         </div>
         {err&&<div style={{color:R,fontSize:11,marginBottom:6}}>{err}</div>}
@@ -316,7 +348,7 @@ function StaffLogin({data,roleType,onLogin,onBack}){
     </div>;
   }
 
-  const roleConfig={ceo:{icon:"👑",label:"CEO / Group Manager",color:"#1a1a2e"},admin_center:{icon:"📋",label:"Admin Center",color:B},academic:{icon:"🎓",label:"Academic Manager",color:"#7C3AED"},accountant:{icon:"💰",label:"Kế toán",color:"#059669"}};
+  const roleConfig={ceo:{icon:"👑",label:"CEO / Group Manager",color:"#1a1a2e"},admin_all:{icon:"🔑",label:"Admin Tổng",color:"#7C3AED"},admin_center:{icon:"📋",label:"Admin Center",color:B},academic:{icon:"🎓",label:"Academic Manager",color:"#059669"},accountant:{icon:"💰",label:"Kế toán",color:"#D97706"}};
   const cfg=roleConfig[roleType]||roleConfig.ceo;
   const availUsers=(data.users||[]).filter(u=>u.role===roleType);
   
@@ -352,6 +384,7 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
   const[fTeacher,setFTeacher]=useState("all");
   const[fType,setFType]=useState("all");// full|part|all
   const[editSes,setEditSes]=useState(null);
+  const[report,setReport]=useState("overview");// overview|expiry|noCheckout|lowAtt|unconfirmed
   const q=currentQuarter();
 
   // Filtered sessions
@@ -478,8 +511,97 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
       </div>
     </div>
 
-    {/* ===== FILTERS ===== */}
-    <Card style={{marginBottom:14,padding:"10px 12px"}}>
+    {/* ===== QUICK REPORT FILTERS ===== */}
+    {(()=>{
+      const hvExpiry7=activeHV.filter(s=>new Date(s.expiryDate)<=in7).length;
+      const hvExpiry30=activeHV.filter(s=>{const d=new Date(s.expiryDate);return d>in7&&d<=in30;}).length;
+      const noCheckout=ts.filter(s=>s.checkIn&&!s.checkOut).length;
+      const unconfirmed=data.teachers.filter(t=>!data.confirmations[`${t.id}_${fMo}`]).length;
+      const lowAtt=filteredTs.filter(t=>{const c=calcT(t);return c.avgAtt>0&&c.avgAtt<80;}).length;
+      const chips=[
+        {k:"overview",l:"📊 Tổng quan",count:null,color:B},
+        {k:"expiry",l:"⏰ Hết hạn",count:hvExpiry7+hvExpiry30,color:hvExpiry7>0?R:O},
+        {k:"noCheckout",l:"🔴 Chưa checkout",count:noCheckout,color:noCheckout>0?R:"#888"},
+        {k:"lowAtt",l:"📉 Chuyên cần thấp",count:lowAtt,color:lowAtt>0?O:"#888"},
+        {k:"unconfirmed",l:"⏳ Chưa XN lương",count:unconfirmed,color:unconfirmed>0?O:"#888"},
+      ];
+      return <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:14,paddingBottom:4}}>
+        {chips.map(c=>(
+          <button key={c.k} onClick={()=>setReport(c.k)} style={{display:"flex",alignItems:"center",gap:4,padding:"7px 12px",borderRadius:20,border:`2px solid ${report===c.k?c.color:"#E2E8F0"}`,background:report===c.k?c.color+"12":W,color:report===c.k?c.color:"#888",fontWeight:report===c.k?700:500,cursor:"pointer",fontSize:11,whiteSpace:"nowrap",transition:"all .15s"}}>
+            {c.l}{c.count!==null&&<span style={{background:c.count>0?c.color+"20":"#F1F5F9",color:c.count>0?c.color:"#888",borderRadius:10,padding:"1px 6px",fontSize:10,fontWeight:800}}>{c.count}</span>}
+          </button>
+        ))}
+      </div>;
+    })()}
+
+    {/* ===== REPORT: EXPIRY ===== */}
+    {report==="expiry"&&<Card style={{marginBottom:14,border:`2px solid ${O}`}}>
+      <div style={{fontSize:13,fontWeight:700,color:R,marginBottom:8}}>⏰ Học viên sắp hết hạn</div>
+      {expired.length>0&&<div style={{marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:700,color:R,marginBottom:4}}>🔴 ĐÃ HẾT HẠN ({expired.length})</div>
+        {expired.slice(0,10).map(s=><div key={s.id} style={{fontSize:11,padding:"4px 0",borderBottom:"1px solid #FEE2E2",display:"flex",justifyContent:"space-between"}}>
+          <span>{s.name} <span style={{color:"#888"}}>({data.centers.find(c=>c.id===s.centerId)?.name})</span></span>
+          <span style={{color:R,fontWeight:600}}>{s.expiryDate}</span>
+        </div>)}
+      </div>}
+      {expiring7.length>0&&<div style={{marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:700,color:O,marginBottom:4}}>🟠 HẾT HẠN TRONG 7 NGÀY ({expiring7.length})</div>
+        {expiring7.map(s=><div key={s.id} style={{fontSize:11,padding:"4px 0",borderBottom:"1px solid #FDE68A",display:"flex",justifyContent:"space-between"}}>
+          <span>{s.name} — GV: {s.classInfo?.[0]?.teacherName||"?"} <span style={{color:"#888"}}>({data.centers.find(c=>c.id===s.centerId)?.name})</span></span>
+          <span style={{color:O,fontWeight:600}}>{s.expiryDate}</span>
+        </div>)}
+      </div>}
+      {expiring30.length>0&&<div>
+        <div style={{fontSize:11,fontWeight:700,color:B,marginBottom:4}}>🔵 HẾT HẠN TRONG 30 NGÀY ({expiring30.length})</div>
+        {expiring30.slice(0,10).map(s=><div key={s.id} style={{fontSize:11,padding:"4px 0",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between"}}>
+          <span>{s.name} — GV: {s.classInfo?.[0]?.teacherName||"?"} <span style={{color:"#888"}}>({data.centers.find(c=>c.id===s.centerId)?.name})</span></span>
+          <span style={{color:B,fontWeight:600}}>{s.expiryDate}</span>
+        </div>)}
+      </div>}
+      {expired.length===0&&expiring7.length===0&&expiring30.length===0&&<div style={{color:"#888",textAlign:"center",fontSize:12}}>Không có HV nào sắp hết hạn</div>}
+    </Card>}
+
+    {/* ===== REPORT: NO CHECKOUT ===== */}
+    {report==="noCheckout"&&<Card style={{marginBottom:14,border:`2px solid ${R}`}}>
+      <div style={{fontSize:13,fontWeight:700,color:R,marginBottom:8}}>🔴 Buổi dạy chưa checkout hôm nay</div>
+      {ts.filter(s=>s.checkIn&&!s.checkOut).map(s=>{
+        const t=data.teachers.find(x=>x.id===s.teacherId);const cn=data.centers.find(c=>c.id===s.centerId);
+        return <div key={s.id} style={{fontSize:12,padding:"6px 0",borderBottom:"1px solid #FEE2E2",display:"flex",justifyContent:"space-between"}}>
+          <span>{t?.name} • {cn?.name}</span>
+          <span style={{color:"#888"}}>Check-in: {fmtT(s.checkIn)}</span>
+        </div>;
+      })}
+      {ts.filter(s=>s.checkIn&&!s.checkOut).length===0&&<div style={{color:G,textAlign:"center",fontSize:12}}>✅ Tất cả đã checkout</div>}
+    </Card>}
+
+    {/* ===== REPORT: LOW ATTENDANCE ===== */}
+    {report==="lowAtt"&&<Card style={{marginBottom:14,border:`2px solid ${O}`}}>
+      <div style={{fontSize:13,fontWeight:700,color:O,marginBottom:8}}>📉 GV có tỷ lệ chuyên cần dưới 80%</div>
+      {filteredTs.filter(t=>{const c=calcT(t);return c.avgAtt>0&&c.avgAtt<80;}).map(t=>{
+        const c=calcT(t);
+        return <div key={t.id} style={{fontSize:12,padding:"6px 0",borderBottom:"1px solid #FDE68A",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><span style={{fontWeight:600}}>{t.name}</span> <span style={{color:"#888",fontSize:10}}>({c.sessionCount} buổi)</span></div>
+          <Badge bg={R+"12"} color={R}>{c.avgAtt}% chuyên cần</Badge>
+        </div>;
+      })}
+      {filteredTs.filter(t=>{const c=calcT(t);return c.avgAtt>0&&c.avgAtt<80;}).length===0&&<div style={{color:G,textAlign:"center",fontSize:12}}>✅ Tất cả GV trên 80%</div>}
+    </Card>}
+
+    {/* ===== REPORT: UNCONFIRMED SALARY ===== */}
+    {report==="unconfirmed"&&<Card style={{marginBottom:14,border:`2px solid ${O}`}}>
+      <div style={{fontSize:13,fontWeight:700,color:O,marginBottom:8}}>⏳ GV chưa xác nhận lương tháng {fMo}</div>
+      {data.teachers.filter(t=>!data.confirmations[`${t.id}_${fMo}`]).map(t=>{
+        const c=calcT(t);
+        return <div key={t.id} style={{fontSize:12,padding:"6px 0",borderBottom:"1px solid #FDE68A",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><span style={{fontWeight:600}}>{t.name}</span> <Badge>{(t.employType||"part")==="full"?"Full":"Part"}</Badge></div>
+          <span style={{fontWeight:700,color:B}}>{fmt(c.total)}</span>
+        </div>;
+      })}
+      {data.teachers.filter(t=>!data.confirmations[`${t.id}_${fMo}`]).length===0&&<div style={{color:G,textAlign:"center",fontSize:12}}>✅ Tất cả đã xác nhận</div>}
+    </Card>}
+
+    {/* ===== FILTERS (show in overview mode) ===== */}
+    {report==="overview"&&<>
       <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:8}}>🔍 Bộ lọc</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:6}}>
         <div><label style={{fontSize:10,fontWeight:600,color:"#888"}}>Tháng</label><input type="month" value={fMo} onChange={e=>setFMo(e.target.value)} style={{width:"100%",padding:"6px 8px",borderRadius:7,border:"1.5px solid #E2E8F0",fontSize:12,boxSizing:"border-box"}}/></div>
@@ -591,13 +713,16 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
     </Sec>
 
     <Btn full bg={R} onClick={async()=>{if(confirm("Reset toàn bộ dữ liệu demo?")){await save(initData());}}}>🔄 Reset demo</Btn>
+    </>}
   </div>;
 }
 
 /* ADMIN TEACHERS */
-function ATeachers({data,save,canEdit=true,fullData}){
+function ATeachers({data,save,canEdit=true,fullData,scopeCenterIds}){
+  const scopedTeachers=scopeCenterIds?data.teachers.filter(t=>(t.centerIds||[]).some(cid=>scopeCenterIds.includes(cid))):data.teachers;
+  const scopedCenters=scopeCenterIds?data.centers.filter(c=>scopeCenterIds.includes(c.id)):data.centers;
   const[show,setShow]=useState(false);const[edit,setEdit]=useState(null);
-  const empty={name:"",phone:"",dob:"",education:"",certificate:"",joinDate:td(),employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:150000,otRateB2B:130000,salaryB2C:150000,salaryB2B:130000,level:"standard",centerIds:[data.centers[0]?.id],bankName:"",bankAccount:"",bankHolder:""};
+  const empty={name:"",phone:"",dob:"",education:"",certificate:"",joinDate:td(),employType:"part",fixedSalary:0,baselineSessions:32,otRateB2C:150000,otRateB2B:130000,salaryB2C:150000,salaryB2B:130000,level:"standard",centerIds:[scopedCenters[0]?.id||data.centers[0]?.id],bankName:"",bankAccount:"",bankHolder:""};
   const[form,setForm]=useState(empty);const f=(k,v)=>setForm(p=>({...p,[k]:v}));
   const isFull=form.employType==="full";
   const doSave=()=>{
@@ -615,13 +740,13 @@ function ATeachers({data,save,canEdit=true,fullData}){
     save({...data,teachers:data.teachers.map(x=>x.id===tid?{...x,status:newStatus}:x)});
   };
 
-  const activeTeachers=data.teachers.filter(t=>(t.status||"active")==="active");
-  const inactiveTeachers=data.teachers.filter(t=>t.status==="inactive");
+  const activeTeachers=scopedTeachers.filter(t=>(t.status||"active")==="active");
+  const inactiveTeachers=scopedTeachers.filter(t=>t.status==="inactive");
   const fullTeachers=activeTeachers.filter(t=>(t.employType||"part")==="full");
   const partTeachers=activeTeachers.filter(t=>(t.employType||"part")==="part");
 
   return <div style={{padding:14}}>
-    <Sec title={`Giáo viên (${data.teachers.length})`} action={canEdit&&<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}>
+    <Sec title={`Giáo viên (${scopedTeachers.length})`} action={canEdit&&<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}>
       {show&&<Card style={{border:`2px solid ${B}`,marginBottom:14}}>
         <Inp label="Họ và tên *" value={form.name} onChange={e=>f("name",e.target.value)}/>
         <Inp label="Số di động (mật khẩu) *" type="tel" value={form.phone} onChange={e=>f("phone",e.target.value)}/>
@@ -659,7 +784,7 @@ function ATeachers({data,save,canEdit=true,fullData}){
           </div>
         </>}
         <div style={{marginBottom:8}}><label style={{fontSize:11,fontWeight:600,color:"#666",display:"block",marginBottom:3}}>Điểm dạy</label>
-          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{data.centers.map(c=>(
+          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{(scopeCenterIds?scopedCenters:data.centers).map(c=>(
             <button key={c.id} onClick={()=>f("centerIds",form.centerIds.includes(c.id)?form.centerIds.filter(x=>x!==c.id):[...form.centerIds,c.id])} style={{padding:"5px 10px",borderRadius:7,border:`1.5px solid ${form.centerIds.includes(c.id)?B:"#E2E8F0"}`,background:form.centerIds.includes(c.id)?B+"10":W,fontWeight:600,fontSize:11,cursor:"pointer",color:form.centerIds.includes(c.id)?B:"#888"}}>
               {c.type==="b2b"?"🏫":"🏠"} {c.name}
             </button>
@@ -754,12 +879,13 @@ function ATeachers({data,save,canEdit=true,fullData}){
 }
 
 /* ADMIN CLASSES & STUDENTS */
-function AClasses({data,save,canEdit=true,fullData}){
+function AClasses({data,save,canEdit=true,fullData,scopeCenterIds}){
+  const allCenters=scopeCenterIds?data.centers.filter(c=>scopeCenterIds.includes(c.id)):data.centers;
   const[show,setShow]=useState(false);
   const[showAddLoc,setShowAddLoc]=useState(false);
   const[newLoc,setNewLoc]=useState({name:"",type:"b2b"});
-  const b2cCenters=data.centers.filter(c=>c.type==="b2c");
-  const b2bCenters=data.centers.filter(c=>c.type==="b2b");
+  const b2cCenters=allCenters.filter(c=>c.type==="b2c");
+  const b2bCenters=allCenters.filter(c=>c.type==="b2b");
   const[viewType,setViewType]=useState("b2c");
   const locs=viewType==="b2c"?b2cCenters:b2bCenters;
   const[cid,setCid]=useState(locs[0]?.id||"");
@@ -999,13 +1125,16 @@ function AStudents({data,save,centerId}){
 }
 
 /* ADMIN RENEWALS — LTV Tracking + Retention Rate */
-function ARenewals({data,save,canEdit=true}){
+function ARenewals({data,save,canEdit=true,scopeCenterIds}){
   const[mo,setMo]=useState(mk());
   const[view,setView]=useState(canEdit?"add":"ltv");// add|ltv|rate
-  const[form,setForm]=useState({teacherId:data.teachers[0]?.id||"",studentId:"",packageMonths:4,date:td(),amount:0,note:""});
+  const scopedStudents=scopeCenterIds?data.students.filter(s=>scopeCenterIds.includes(s.centerId)):data.students;
+  const scopedTeachers=scopeCenterIds?data.teachers.filter(t=>(t.centerIds||[]).some(cid=>scopeCenterIds.includes(cid))):data.teachers;
+  const[form,setForm]=useState({teacherId:scopedTeachers[0]?.id||data.teachers[0]?.id||"",studentId:"",packageMonths:4,date:td(),amount:0,note:""});
   const allRenewals=data.renewals||[];
-  const moRenewals=allRenewals.filter(r=>mk(r.date)===mo);
-  const eligibleStudents=data.students.filter(s=>s.status==="Đang học");
+  const scopedRenewals=scopeCenterIds?allRenewals.filter(r=>scopedStudents.some(s=>s.id===r.studentId)):allRenewals;
+  const moRenewals=scopedRenewals.filter(r=>mk(r.date)===mo);
+  const eligibleStudents=scopedStudents.filter(s=>s.status==="Đang học");
 
   const addR=()=>{
     if(!form.studentId)return alert("Chọn học viên");
@@ -1017,7 +1146,7 @@ function ARenewals({data,save,canEdit=true}){
   // ===== LTV PER STUDENT =====
   const studentLTV=()=>{
     const map={};
-    allRenewals.forEach(r=>{
+    scopedRenewals.forEach(r=>{
       if(!map[r.studentId])map[r.studentId]={renewals:[],totalMonths:0,totalAmount:0};
       map[r.studentId].renewals.push(r);
       map[r.studentId].totalMonths+=r.packageMonths||0;
@@ -1028,7 +1157,6 @@ function ARenewals({data,save,canEdit=true}){
       const cn=data.centers.find(c=>c.id===s?.centerId);
       const cls=data.classes.filter(c=>c.studentIds.includes(sid));
       const gvNames=[...new Set(cls.map(c=>{const t=data.teachers.find(x=>x.id===c.teacherId);return t?.name||"?";}))]
-      // Estimate LTV: enrollDate → last renewal end
       const enrollDate=s?.enrollDate||"";
       const lastR=info.renewals.sort((a,b)=>b.date.localeCompare(a.date))[0];
       const totalLifeMonths=enrollDate?(Math.round((new Date(lastR?.date||td())-new Date(enrollDate))/(30.44*86400000))):0;
@@ -1038,7 +1166,7 @@ function ARenewals({data,save,canEdit=true}){
 
   // ===== RETENTION RATE PER TEACHER =====
   const teacherRetention=()=>{
-    return data.teachers.map(t=>{
+    return scopedTeachers.map(t=>{
       const tClasses=data.classes.filter(c=>c.teacherId===t.id);
       const tStudentIds=[...new Set(tClasses.flatMap(c=>c.studentIds))];
       const tStudents=tStudentIds.map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
@@ -1093,7 +1221,7 @@ function ARenewals({data,save,canEdit=true}){
       <input type="month" value={mo} onChange={e=>setMo(e.target.value)} style={{width:"100%",padding:"7px 12px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,fontWeight:600,marginBottom:12,boxSizing:"border-box"}}/>
       <Card style={{border:`2px solid ${G}`}}>
         <div style={{fontSize:13,fontWeight:700,color:G,marginBottom:8}}>🔄 Ghi nhận Tái đăng ký</div>
-        <Sel label="GV phụ trách" value={form.teacherId} onChange={v=>setForm(p=>({...p,teacherId:v}))} options={data.teachers.map(t=>({value:t.id,label:t.name}))}/>
+        <Sel label="GV phụ trách" value={form.teacherId} onChange={v=>setForm(p=>({...p,teacherId:v}))} options={scopedTeachers.map(t=>({value:t.id,label:t.name}))}/>
         <Sel label="Học viên" value={form.studentId} onChange={v=>setForm(p=>({...p,studentId:v}))} options={[{value:"",label:"-- Chọn HV --"},...eligibleStudents.map(s=>{
           const cn=data.centers.find(c=>c.id===s.centerId);
           const prevR=allRenewals.filter(r=>r.studentId===s.id).length;
@@ -1114,7 +1242,7 @@ function ARenewals({data,save,canEdit=true}){
       <Sec title={`Tái đăng ký tháng ${mo} (${moRenewals.length})`}>
         {moRenewals.map(r=>{
           const t=data.teachers.find(x=>x.id===r.teacherId);const s=data.students.find(x=>x.id===r.studentId);
-          const bp=data.bonusPolicy;const bonus=r.packageMonths>=12?bp.retentionBonus12:r.packageMonths>=6?bp.retentionBonus6:bp.retentionBonus4;
+          const bp=data.bonusPolicy;const bonus=bp.renewalBonus||200000;
           const renewalNum=allRenewals.filter(x=>x.studentId===r.studentId&&x.date<=r.date).length;
           return <Card key={r.id} style={{padding:"8px 12px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1255,17 +1383,19 @@ function ARenewals({data,save,canEdit=true}){
 }
 
 /* ADMIN REFERRALS */
-function ARefr({data,save,canEdit=true}){
+function ARefr({data,save,canEdit=true,scopeCenterIds}){
   const[mo,setMo]=useState(mk());
-  const[form,setForm]=useState({teacherId:data.teachers[0]?.id||"",studentName:"",note:"",date:td()});
-  const refs=(data.referrals||[]).filter(r=>mk(r.date)===mo);
+  const scopedTeachers=scopeCenterIds?data.teachers.filter(t=>(t.centerIds||[]).some(cid=>scopeCenterIds.includes(cid))):data.teachers;
+  const[form,setForm]=useState({teacherId:scopedTeachers[0]?.id||data.teachers[0]?.id||"",studentName:"",note:"",date:td()});
+  const scopedRefs=scopeCenterIds?(data.referrals||[]).filter(r=>scopedTeachers.some(t=>t.id===r.teacherId)):(data.referrals||[]);
+  const refs=scopedRefs.filter(r=>mk(r.date)===mo);
   const addR=()=>{if(!form.studentName)return;save({...data,referrals:[...(data.referrals||[]),{...form,id:uid()}]});setForm(p=>({...p,studentName:"",note:""}));};
   const rmR=id=>save({...data,referrals:(data.referrals||[]).filter(r=>r.id!==id)});
   return <div style={{padding:14}}>
     <input type="month" value={mo} onChange={e=>setMo(e.target.value)} style={{width:"100%",padding:"7px 12px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,fontWeight:600,marginBottom:12,boxSizing:"border-box"}}/>
     {canEdit&&<Card style={{border:`2px solid ${B}`}}>
       <div style={{fontSize:13,fontWeight:700,color:B,marginBottom:8}}>🎯 Thêm Referral</div>
-      <Sel label="GV giới thiệu" value={form.teacherId} onChange={v=>setForm(p=>({...p,teacherId:v}))} options={data.teachers.map(t=>({value:t.id,label:t.name}))}/>
+      <Sel label="GV giới thiệu" value={form.teacherId} onChange={v=>setForm(p=>({...p,teacherId:v}))} options={scopedTeachers.map(t=>({value:t.id,label:t.name}))}/>
       <Inp label="Tên HV mới" value={form.studentName} onChange={e=>setForm(p=>({...p,studentName:e.target.value}))}/>
       <Inp label="Ghi chú" value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))}/>
       <Btn full onClick={addR} bg={G}>+ Thêm referral</Btn>
@@ -1759,33 +1889,38 @@ function APolicy({data,save}){
   };
 
   return <div style={{padding:14}}>
-    <Sec title="⚙️ Chính sách thưởng">
-      <Card>
-        <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:8}}>Thưởng dự giờ / quý</div>
-        <Inp label="Số tiền/quý (đạt ≥80%)" type="number" value={p.obsBonus} onChange={e=>f("obsBonus",e.target.value)}/>
+    <Sec title="⚙️ Chính sách thưởng / phạt">
+      <Card style={{border:`2px solid ${G}`,marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:800,color:G,marginBottom:10}}>🎁 A — THƯỞNG</div>
+        <Inp label="HV tái đăng ký (đ/bé)" type="number" value={p.renewalBonus} onChange={e=>f("renewalBonus",e.target.value)}/>
+        <div style={{fontSize:10,color:"#888",marginBottom:8}}>ĐK: Tiếp nhận HV ≥2 tháng, đầy đủ chăm sóc PH cuối khóa. Không áp dụng GV thử việc.</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <Inp label="Ngưỡng chuyên cần HV (%)" type="number" value={p.kpiAttThreshold} onChange={e=>f("kpiAttThreshold",e.target.value)}/>
+          <Inp label="Thưởng chuyên cần (đ/tháng)" type="number" value={p.kpiAttBonus} onChange={e=>f("kpiAttBonus",e.target.value)}/>
+        </div>
+        <div style={{fontSize:10,color:"#888",marginBottom:8}}>Chuyên cần HV ≥{p.kpiAttThreshold||95}% → {fmt(p.kpiAttBonus||0)}/tháng</div>
+        <Inp label="Dẫn HV học thử (đ/bé)" type="number" value={p.trialBringBonus} onChange={e=>f("trialBringBonus",e.target.value)}/>
+        <div style={{fontSize:10,color:"#888",marginBottom:8}}>Bé chưa từng học WOW ART.</div>
+        <Inp label="HV học thử → ĐK chính thức (đ/bé)" type="number" value={p.trialConvertBonus} onChange={e=>f("trialConvertBonus",e.target.value)}/>
+        <Inp label="Dạy học thử thành công (đ/bé)" type="number" value={p.trialTeachBonus} onChange={e=>f("trialTeachBonus",e.target.value)}/>
+        <div style={{fontSize:10,color:"#888",marginBottom:8}}>Bé đóng tiền sau học thử.</div>
+        <Inp label="Dự giờ đạt ≥80% (đ/quý)" type="number" value={p.obsBonus} onChange={e=>f("obsBonus",e.target.value)}/>
         <div style={{fontSize:10,color:"#888",marginBottom:8}}>Pro-rate: {fmt(Math.round((p.obsBonus||0)/3))}/tháng</div>
-
-        <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:8,marginTop:8}}>KPI điểm danh (theo quý)</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-          <Inp label="Ngưỡng TL đi học (%)" type="number" value={p.kpiAttThreshold} onChange={e=>f("kpiAttThreshold",e.target.value)}/>
-          <Inp label="Thưởng KPI/quý" type="number" value={p.kpiAttBonus} onChange={e=>f("kpiAttBonus",e.target.value)}/>
+          <Inp label="Referral/bé" type="number" value={p.referralBonus} onChange={e=>f("referralBonus",e.target.value)}/>
+          <Inp label="Bonus 3 ref/quý" type="number" value={p.referralQBonus} onChange={e=>f("referralQBonus",e.target.value)}/>
         </div>
-        <div style={{fontSize:10,color:"#888",marginBottom:8}}>TL đi học quý ≥{p.kpiAttThreshold}% → thưởng {fmt(p.kpiAttBonus||0)}/quý (= {fmt(Math.round((p.kpiAttBonus||0)/3))}/tháng)</div>
-
-        <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:8,marginTop:8}}>Thưởng tái đăng ký</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
-          <Inp label="Gói 4T" type="number" value={p.retentionBonus4} onChange={e=>f("retentionBonus4",e.target.value)}/>
-          <Inp label="Gói 6T" type="number" value={p.retentionBonus6} onChange={e=>f("retentionBonus6",e.target.value)}/>
-          <Inp label="Gói 12T" type="number" value={p.retentionBonus12} onChange={e=>f("retentionBonus12",e.target.value)}/>
-        </div>
-        <div style={{fontSize:12,fontWeight:700,color:B,marginBottom:8,marginTop:12}}>Thưởng referral</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-          <Inp label="Mỗi bé" type="number" value={p.referralBonus} onChange={e=>f("referralBonus",e.target.value)}/>
-          <Inp label="Bonus 3 bé/quý" type="number" value={p.referralQBonus} onChange={e=>f("referralQBonus",e.target.value)}/>
-        </div>
-        <Inp label="Thưởng trial chốt ĐK" type="number" value={p.trialConvertBonus} onChange={e=>f("trialConvertBonus",e.target.value)}/>
-        <Btn full onClick={doSave} bg={saved?G:B} style={{marginTop:8}}>{saved?"✓ Đã lưu thành công":"💾 Lưu chính sách"}</Btn>
       </Card>
+      <Card style={{border:`2px solid ${R}`,marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:800,color:R,marginBottom:10}}>⚠️ B — PHẠT</div>
+        <div style={{fontSize:11,color:"#666",marginBottom:8}}>Đi trễ / nghỉ báo gấp (không lý do chính đáng):</div>
+        <div style={{fontSize:11,marginBottom:4}}>• Lần 1: <strong>Nhắc nhở</strong> (không trừ lương)</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <Inp label="Lần 2: trừ (đ/ca)" type="number" value={p.latePenalty2} onChange={e=>f("latePenalty2",e.target.value)}/>
+          <Inp label="Lần 3+: trừ (đ/ca)" type="number" value={p.latePenalty3} onChange={e=>f("latePenalty3",e.target.value)}/>
+        </div>
+      </Card>
+      <Btn full onClick={doSave} bg={saved?G:B}>{saved?"✓ Đã lưu thành công":"💾 Lưu chính sách"}</Btn>
     </Sec>
 
     {/* ADMIN SETUP & TOOLS */}
@@ -1936,11 +2071,14 @@ GIÁO VIÊN CHI TIẾT:
 ${teacherStats}
 
 CHÍNH SÁCH THƯỞNG:
-- KPI điểm danh: ≥${data.bonusPolicy.kpiAttThreshold}% → ${(data.bonusPolicy.kpiAttBonus/1000)}k/quý
-- Trial chốt: ${(data.bonusPolicy.trialConvertBonus/1000)}k/bé
-- Referral: ${(data.bonusPolicy.referralBonus/1000)}k/bé, bonus 3 bé/quý: ${(data.bonusPolicy.referralQBonus/1000)}k
-- Tái ĐK: 4T=${(data.bonusPolicy.retentionBonus4/1000)}k, 6T=${(data.bonusPolicy.retentionBonus6/1000)}k, 12T=${(data.bonusPolicy.retentionBonus12/1000)}k
-- Dự giờ: ${(data.bonusPolicy.obsBonus/1000)}k/quý (đạt ≥80%)
+- Tái ĐK: ${(data.bonusPolicy.renewalBonus/1000)}k/bé
+- Chuyên cần HV ≥${data.bonusPolicy.kpiAttThreshold}%: ${(data.bonusPolicy.kpiAttBonus/1000)}k/tháng
+- Dẫn học thử: ${(data.bonusPolicy.trialBringBonus/1000)}k/bé
+- Trial chốt ĐK: ${(data.bonusPolicy.trialConvertBonus/1000)}k/bé
+- Dạy HT thành công: ${(data.bonusPolicy.trialTeachBonus/1000)}k/bé
+- Referral: ${(data.bonusPolicy.referralBonus/1000)}k/bé
+- Dự giờ đạt ≥80%: ${(data.bonusPolicy.obsBonus/1000)}k/quý
+- Phạt trễ: Lần 1 nhắc nhở, Lần 2 trừ ${(data.bonusPolicy.latePenalty2/1000)}k/ca, Lần 3+ trừ ${(data.bonusPolicy.latePenalty3/1000)}k/ca
 
 HV SẮP HẾT KHÓA (30 ngày):
 ${expiring.length>0?expiring.map(s=>`- ${s.name} (${data.centers.find(c=>c.id===s.centerId)?.name||"?"}) — hết ${s.expiryDate} — PH: ${s.parentName} ${s.parentPhone}`).join("\n"):"Không có"}`;
@@ -2042,43 +2180,53 @@ function calcSalary(t,sessions,data,mo){
     sessionPay=ss.reduce((a,s)=>a+(s.type==="b2c"?t.salaryB2C:t.salaryB2B),0);
   }
 
-  // Attendance — tính cho tháng này
+  // Attendance — monthly
   let totSt=0,totPr=0;
   ss.forEach(s=>{const en=(s.attendance||[]).filter(a=>!a.isTrial);totSt+=en.length;totPr+=en.filter(a=>a.present).length;});
   const avgAtt=totSt?Math.round(totPr/totSt*100):0;
 
-  // KPI điểm danh — QUARTERLY: tính trên toàn bộ sessions trong quý
-  const qAllSessions=data.sessions.filter(s=>s.teacherId===t.id&&getQuarter(s.date)===q&&s.checkIn&&s.checkOut);
-  let qTotSt=0,qTotPr=0;
-  qAllSessions.forEach(s=>{const en=(s.attendance||[]).filter(a=>!a.isTrial);qTotSt+=en.length;qTotPr+=en.filter(a=>a.present).length;});
-  const qAvgAtt=qTotSt?Math.round(qTotPr/qTotSt*100):0;
-  const kpiAttQ=qAvgAtt>=bp.kpiAttThreshold;// đạt ngưỡng trong quý?
-  const kpiAtt=kpiAttQ?Math.round((bp.kpiAttBonus||0)/3):0;// pro-rate monthly
+  // KPI chuyên cần HV ≥95% → 100k/tháng (monthly, not quarterly anymore)
+  const kpiAtt=avgAtt>=(bp.kpiAttThreshold||95)?(bp.kpiAttBonus||100000):0;
 
-  // Trial conversion
+  // Trial: dẫn HV học thử 100k/bé + dạy HT thành công (converted) 500k + 100k
+  const trialBrought=ss.reduce((a,s)=>a+(s.attendance||[]).filter(x=>x.isTrial).length,0);
   const trialConv=ss.reduce((a,s)=>a+(s.attendance||[]).filter(x=>x.isTrial&&x.converted).length,0);
-  const trialBonus=trialConv*(bp.trialConvertBonus||0);
+  const trialBringBonus=trialBrought*(bp.trialBringBonus||100000);
+  const trialConvertBonus=trialConv*(bp.trialConvertBonus||500000);
+  const trialTeachBonus=trialConv*(bp.trialTeachBonus||100000);
+  const trialBonus=trialBringBonus+trialConvertBonus+trialTeachBonus;
 
-  // Referrals
+  // Referrals (kept for backward compat)
   const refs=(data.referrals||[]).filter(r=>r.teacherId===t.id&&mk(r.date)===mo);
-  const refBonus=refs.length*(bp.referralBonus||0);
+  const refBonus=refs.length*(bp.referralBonus||100000);
   const qRefs=(data.referrals||[]).filter(r=>r.teacherId===t.id&&getQuarter(r.date)===q);
-  const refQBonus=qRefs.length>=3?Math.round((bp.referralQBonus||0)/3):0;
+  const refQBonus=qRefs.length>=3?Math.round((bp.referralQBonus||500000)/3):0;
 
-  // Renewals
+  // Renewals: 200k/bé flat
   const renewals=(data.renewals||[]).filter(r=>r.teacherId===t.id&&mk(r.date)===mo);
-  const renewalBonus=renewals.reduce((a,r)=>{
-    return a+(r.packageMonths>=12?bp.retentionBonus12:r.packageMonths>=6?bp.retentionBonus6:bp.retentionBonus4);
-  },0);
+  const renewalBonus=renewals.length*(bp.renewalBonus||200000);
 
   // Obs bonus (quarterly, pro-rate monthly)
   const qObs=data.observations.filter(o=>o.teacherId===t.id&&getQuarter(o.date)===q);
   const bestObs=qObs.length>0?Math.max(...qObs.map(o=>o.pct||o.score||0)):0;
   const obsBonus=qObs.length>0&&bestObs>=80?Math.round((bp.obsBonus||0)/3):0;
 
+  // PENALTIES: đi trễ & nghỉ báo gấp
+  const allMoSessions=data.sessions.filter(s=>s.teacherId===t.id&&mk(s.date)===mo&&s.checkIn&&s.checkOut);
+  let lateCount=0;
+  allMoSessions.forEach(s=>{
+    if(s.checkIn&&s.classStartTime){
+      if(!isOnTime(s.checkIn,s.classStartTime))lateCount++;
+    }
+  });
+  let penalty=0;
+  if(lateCount>=3)penalty=lateCount*(bp.latePenalty3||100000);
+  else if(lateCount>=2)penalty=(bp.latePenalty2||50000);
+  // lần 1: chỉ nhắc nhở, không trừ
+
   const totalBonus=kpiAtt+trialBonus+refBonus+refQBonus+renewalBonus+obsBonus;
   const fixedPay=isFull?(t.fixedSalary||0):0;
-  const total=fixedPay+sessionPay+totalBonus;
+  const total=Math.max(0,fixedPay+sessionPay+totalBonus-penalty);
   const tClasses=data.classes.filter(c=>c.teacherId===t.id);
   const tStudentIds=[...new Set(tClasses.flatMap(c=>c.studentIds))];
   const totalHV=tStudentIds.length;
@@ -2087,10 +2235,10 @@ function calcSalary(t,sessions,data,mo){
 
   return {
     isFull,fixedPay,sessionPay,sessionCount,otSessions,baselineSessions,
-    avgAtt,qAvgAtt,kpiAttQ,kpiAtt,trialConv,trialBonus,
+    avgAtt,kpiAtt,trialBrought,trialConv,trialBringBonus,trialConvertBonus,trialTeachBonus,trialBonus,
     refCount:refs.length,refBonus,refQBonus,
     renewalCount:renewals.length,renewalBonus,
-    obsBonus,totalBonus,total,
+    obsBonus,lateCount,penalty,totalBonus,total,
     totalHV,costPerHV,costPerSession
   };
 }
@@ -2162,12 +2310,13 @@ function APayroll({data,save,canEdit=true,showBank=false,scopeCenterIds}){
         {!isFull && <>
           <Row l={`Lương buổi (${c.sessionCount})`} v={fmt(c.sessionPay)}/>
         </>}
-        <Row l={`KPI quý (${c.qAvgAtt||c.avgAtt}%)`} v={fmt(c.kpiAtt)}/>
-        <Row l={`Trial chốt (${c.trialConv})`} v={fmt(c.trialBonus)}/>
+        <Row l={`Chuyên cần HV (${c.avgAtt}%)`} v={fmt(c.kpiAtt)}/>
+        <Row l={`Dẫn HT (${c.trialBrought||0}) + Trial→ĐK (${c.trialConv})`} v={fmt(c.trialBonus)}/>
         <Row l={`Referral (${c.refCount})`} v={fmt(c.refBonus)}/>
         {c.refQBonus>0&&<Row l="Bonus 3 ref/quý" v={fmt(c.refQBonus)}/>}
         <Row l={`Tái ĐK (${c.renewalCount})`} v={fmt(c.renewalBonus)}/>
         <Row l="Thưởng dự giờ" v={fmt(c.obsBonus)}/>
+        {(c.penalty||0)>0&&<Row l={`⚠️ Phạt trễ (${c.lateCount}x)`} v={`-${fmt(c.penalty)}`} color={R}/>}
         <div style={{display:"flex",justifyContent:"space-between",paddingTop:6,borderTop:`2px solid ${accent}`,marginTop:4}}>
           <span style={{fontWeight:800,color:accent,fontSize:13}}>TỔNG</span>
           <span style={{fontWeight:800,color:accent,fontSize:15}}>{fmt(c.total)}</span>
@@ -2222,7 +2371,7 @@ function APayroll({data,save,canEdit=true,showBank=false,scopeCenterIds}){
 /* USER MANAGEMENT (CEO ONLY) */
 function AUsers({data,save}){
   const[show,setShow]=useState(false);const[edit,setEdit]=useState(null);
-  const roleOpts=[{value:"ceo",label:"👑 CEO"},{value:"admin_center",label:"📋 Admin Center"},{value:"academic",label:"🎓 Academic Manager"},{value:"accountant",label:"💰 Kế toán"}];
+  const roleOpts=[{value:"ceo",label:"👑 CEO"},{value:"admin_all",label:"🔑 Admin Tổng"},{value:"admin_center",label:"📋 Admin Center"},{value:"academic",label:"🎓 Academic Manager"},{value:"accountant",label:"💰 Kế toán"}];
   const empty={name:"",role:"admin_center",password:"",centerIds:[]};
   const[form,setForm]=useState(empty);const f=(k,v)=>setForm(p=>({...p,[k]:v}));
   const doSave=()=>{
@@ -2242,7 +2391,7 @@ function AUsers({data,save}){
         <Sel label="Vai trò" value={form.role} onChange={v=>f("role",v)} options={roleOpts}/>
         <Inp label="Mật khẩu *" value={form.password} onChange={e=>f("password",e.target.value)} placeholder="VD: tp@789"/>
         {form.role==="admin_center"&&<div style={{marginBottom:8}}>
-          <label style={{fontSize:11,fontWeight:600,color:"#666",display:"block",marginBottom:3}}>Gán Center (Admin Center)</label>
+          <label style={{fontSize:11,fontWeight:600,color:"#666",display:"block",marginBottom:3}}>Gán Center</label>
           <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>{data.centers.map(c=>(
             <button key={c.id} onClick={()=>f("centerIds",form.centerIds.includes(c.id)?form.centerIds.filter(x=>x!==c.id):[...form.centerIds,c.id])} style={{padding:"5px 10px",borderRadius:7,border:`1.5px solid ${form.centerIds.includes(c.id)?B:"#E2E8F0"}`,background:form.centerIds.includes(c.id)?B+"10":W,fontWeight:600,fontSize:11,cursor:"pointer",color:form.centerIds.includes(c.id)?B:"#888"}}>
               {c.type==="b2b"?"🏫":"🏠"} {c.name} ({c.id})
@@ -2253,7 +2402,7 @@ function AUsers({data,save}){
       </Card>}
 
       {users.map(u=>{
-        const rc={ceo:{icon:"👑",color:"#1a1a2e"},admin_center:{icon:"📋",color:B},academic:{icon:"🎓",color:"#7C3AED"},accountant:{icon:"💰",color:"#059669"}}[u.role]||{icon:"👤",color:"#888"};
+        const rc={ceo:{icon:"👑",color:"#1a1a2e"},admin_all:{icon:"🔑",color:"#7C3AED"},admin_center:{icon:"📋",color:B},academic:{icon:"🎓",color:"#059669"},accountant:{icon:"💰",color:"#D97706"}}[u.role]||{icon:"👤",color:"#888"};
         return <Card key={u.id} style={{padding:"10px 12px",borderLeft:`3px solid ${rc.color}`}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <div>
@@ -2298,6 +2447,8 @@ function TAtt({data,save,user}){
   const[selClass,setSelClass]=useState(myClasses[0]?.id||"");
   const[extraName,setExtraName]=useState("");const[extraType,setExtraType]=useState("trial");
   const[report,setReport]=useState("");
+  const[lessonPrepped,setLessonPrepped]=useState(false);
+  const[lessonPrepImg,setLessonPrepImg]=useState("");// base64 thumbnail
 
   // FIX #11: Track session count for Full-time baseline display
   const isFull=(user.employType||"part")==="full";
@@ -2305,17 +2456,34 @@ function TAtt({data,save,user}){
   const moCount=moSessions.length;
   const baseline=user.baselineSessions||32;
 
+  const handlePrepImg=(e)=>{
+    const file=e.target.files?.[0];if(!file)return;
+    if(file.size>2*1024*1024)return alert("Ảnh tối đa 2MB");
+    const reader=new FileReader();
+    reader.onload=()=>{
+      // Resize to thumbnail ~400px wide to save Firebase space
+      const img=new Image();
+      img.onload=()=>{
+        const canvas=document.createElement("canvas");
+        const maxW=400;const scale=Math.min(maxW/img.width,1);
+        canvas.width=img.width*scale;canvas.height=img.height*scale;
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        setLessonPrepImg(canvas.toDataURL("image/jpeg",0.7));
+      };
+      img.src=reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const checkIn=()=>{
     const cl=myClasses.find(c=>c.id===selClass);if(!cl)return alert("Chọn ca dạy");
-    // FIX #1: Chặn check-in trùng cùng classId cùng ngày
+    if(!lessonPrepped)return alert("Vui lòng xác nhận đã soạn bài trước khi check-in!");
     const duplicate=todaySessions.find(s=>s.classId===selClass&&s.checkOut);
     if(duplicate)return alert("Bạn đã check-in ca này hôm nay rồi! Không thể check-in trùng.");
-    // FIX #3: Cảnh báo nếu không đúng thứ (cho phép nhưng xác nhận)
     const today=new Date().getDay();
     if(cl.day!==today){
       if(!confirm(`Ca này lịch là ${DAYS_FULL[cl.day]} nhưng hôm nay là ${DAYS_FULL[today]}.\nBạn muốn check-in dạy bù?`))return;
     }
-    // FIX #7: Chỉ load HV có status "Đang học" hoặc "Trial" vào attendance
     const activeStudentIds=cl.studentIds.filter(sid=>{
       const st=data.students.find(s=>s.id===sid);
       return st&&(st.status==="Đang học"||st.status==="Trial");
@@ -2324,9 +2492,9 @@ function TAtt({data,save,user}){
       const st=data.students.find(s=>s.id===sid);
       return {studentId:sid,name:st?.name||"?",present:true,isTrial:st?.status==="Trial",isMakeup:false,converted:false};
     });
-    // Auto-detect type from location
-    const session={id:uid(),teacherId:user.id,classId:selClass,centerId:cid,date:td(),type:locType,checkIn:new Date().toISOString(),checkOut:null,classStartTime:cl.startTime,attendance,reportSent:false,reportNote:""};
+    const session={id:uid(),teacherId:user.id,classId:selClass,centerId:cid,date:td(),type:locType,checkIn:new Date().toISOString(),checkOut:null,classStartTime:cl.startTime,attendance,reportSent:false,reportNote:"",lessonPrepped:true,lessonPrepImg:lessonPrepImg||""};
     save({...data,sessions:[...data.sessions,session]});
+    setLessonPrepped(false);setLessonPrepImg("");
   };
   const checkOut=()=>{
     if(!activeSession)return;
@@ -2393,6 +2561,20 @@ function TAtt({data,save,user}){
               return <div key={sid} style={{fontSize:12,padding:"3px 0",color:"#555"}}>• {s.name} ({s.gender}•{s.studentLevel}) — PH: {s.parentName} — <span style={{color:s.status==="Đang học"?G:s.status==="Trial"?B:R,fontWeight:600,fontSize:10}}>{s.status}</span></div>;
             })}
           </>}
+          {/* LESSON PREP CHECK */}
+          <div style={{background:"#FFFBEB",border:"2px solid #F4C42D",borderRadius:10,padding:12,marginTop:10}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:8}}>📝 Xác nhận soạn bài</div>
+            <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",marginBottom:8}}>
+              <input type="checkbox" checked={lessonPrepped} onChange={e=>setLessonPrepped(e.target.checked)} style={{width:20,height:20,accentColor:G}}/>
+              <span style={{fontSize:13,fontWeight:600,color:lessonPrepped?G:"#92400E"}}>{lessonPrepped?"✅ Đã soạn bài":"Tôi đã soạn bài cho buổi dạy hôm nay"}</span>
+            </label>
+            <div style={{fontSize:11,color:"#888",marginBottom:6}}>Đính kèm ảnh bài soạn (không bắt buộc):</div>
+            <input type="file" accept="image/*" capture="environment" onChange={handlePrepImg} style={{fontSize:11,marginBottom:4}}/>
+            {lessonPrepImg&&<div style={{marginTop:6}}>
+              <img src={lessonPrepImg} alt="Bài soạn" style={{maxWidth:"100%",maxHeight:200,borderRadius:8,border:"1px solid #E5E7EB"}}/>
+              <button onClick={()=>setLessonPrepImg("")} style={{fontSize:10,color:R,background:"none",border:"none",cursor:"pointer",marginTop:2}}>🗑 Xóa ảnh</button>
+            </div>}
+          </div>
           <Btn full onClick={checkIn} style={{marginTop:10}}>⏰ CHECK-IN</Btn>
         </Card>
       </>
@@ -2577,12 +2759,15 @@ function TSalary({data,save,user}){
         </> : <>
           <Row l={`Lương buổi (${c.sessionCount})`} v={fmt(c.sessionPay)}/>
         </>}
-        <Row l={`KPI quý (${c.qAvgAtt||c.avgAtt}%)`} v={fmt(c.kpiAtt)}/>
-        <Row l={`Trial chốt (${c.trialConv})`} v={fmt(c.trialBonus)}/>
+        <Row l={`Chuyên cần HV (${c.avgAtt}%)`} v={fmt(c.kpiAtt)}/>
+        <Row l={`Dẫn học thử (${c.trialBrought||0})`} v={fmt(c.trialBringBonus||0)}/>
+        <Row l={`Trial → ĐK (${c.trialConv})`} v={fmt(c.trialConvertBonus||0)}/>
+        <Row l={`Dạy HT t.công (${c.trialConv})`} v={fmt(c.trialTeachBonus||0)}/>
         <Row l={`Referral (${c.refCount})`} v={fmt(c.refBonus)}/>
         {c.refQBonus>0&&<Row l="Bonus 3 ref/quý" v={fmt(c.refQBonus)}/>}
         <Row l={`Tái ĐK (${c.renewalCount})`} v={fmt(c.renewalBonus)}/>
-        <Row l="Thưởng dự giờ" v={fmt(c.obsBonus)} border={false}/>
+        <Row l="Thưởng dự giờ" v={fmt(c.obsBonus)}/>
+        {(c.penalty||0)>0&&<Row l={`⚠️ Phạt trễ (${c.lateCount} lần)`} v={`-${fmt(c.penalty)}`} color={R}/>}
       </div>
     </Card>
     <Btn full onClick={confirm2} disabled={isC} bg={isC?G:O} color={isC?W:D}>{isC?`✓ Đã xác nhận — ${new Date(data.confirmations[ck]).toLocaleDateString("vi-VN")}`:"Xác nhận bảng lương"}</Btn>
@@ -2621,17 +2806,27 @@ function TSalary({data,save,user}){
 }
 
 /* TEACHER PROFILE */
-function TProf({data,user}){
+function TProf({data,save,user}){
   const t=data.teachers.find(x=>x.id===user.id);if(!t)return null;
   const isFull=(t.employType||"part")==="full";
   const totalSessions=data.sessions.filter(s=>s.teacherId===user.id&&s.checkOut).length;
   const tClasses=data.classes.filter(c=>c.teacherId===user.id);
   const accent=isFull?"#7C3AED":B;
+  const[showPw,setShowPw]=useState(false);
+  const[oldPw,setOldPw]=useState("");const[newPw,setNewPw]=useState("");const[cfmPw,setCfmPw]=useState("");const[pwMsg,setPwMsg]=useState("");
+  const changePw=()=>{
+    const curPw=t.password||t.phone;
+    if(oldPw!==curPw){setPwMsg("❌ Mật khẩu cũ không đúng");return;}
+    if(newPw.length<4){setPwMsg("❌ Mật khẩu mới tối thiểu 4 ký tự");return;}
+    if(newPw!==cfmPw){setPwMsg("❌ Xác nhận không khớp");return;}
+    save({...data,teachers:data.teachers.map(x=>x.id===t.id?{...x,password:newPw}:x)});
+    setOldPw("");setNewPw("");setCfmPw("");setPwMsg("✅ Đã đổi mật khẩu thành công!");setShowPw(false);
+  };
   return <div style={{padding:14}}>
     <div style={{background:`linear-gradient(135deg,${accent},${isFull?"#5B21B6":"#2980B9"})`,borderRadius:14,padding:20,color:W,textAlign:"center",marginBottom:14}}>
       <div style={{fontSize:40,marginBottom:6}}>👩‍🏫</div>
       <div style={{fontSize:18,fontWeight:800}}>{t.name}</div>
-      <div style={{fontSize:12,opacity:.8,marginTop:2}}>Mã: {t.id.toUpperCase()} • {t.level.toUpperCase()} • {isFull?"👔 Full-time":"⏰ Part-time"}</div>
+      <div style={{fontSize:12,opacity:.8,marginTop:2}}>{t.level.toUpperCase()} • {isFull?"👔 Full-time":"⏰ Part-time"}</div>
     </div>
     <Card>
       {[
@@ -2650,6 +2845,62 @@ function TProf({data,user}){
         ]),
         {l:"Tổng lớp quản lý",v:tClasses.length},{l:"Tổng buổi đã dạy",v:totalSessions},
       ].map((r,i)=> <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #F5F5F5",fontSize:12}}><span style={{color:"#888"}}>{r.l}</span><span style={{fontWeight:600}}>{r.v}</span></div>)}
+    </Card>
+    {/* Change password */}
+    <Card style={{marginTop:12,border:`2px solid ${accent}`}}>
+      <button onClick={()=>setShowPw(!showPw)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",padding:0}}>
+        <span style={{fontWeight:700,fontSize:13,color:accent}}>🔐 Đổi mật khẩu</span>
+        <span style={{color:"#888",fontSize:12}}>{showPw?"▲":"▼"}</span>
+      </button>
+      {showPw&&<div style={{marginTop:10}}>
+        <Inp label="Mật khẩu hiện tại" type="password" value={oldPw} onChange={e=>setOldPw(e.target.value)} placeholder="Nhập mật khẩu cũ..."/>
+        <Inp label="Mật khẩu mới (≥4 ký tự)" type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="Nhập mật khẩu mới..."/>
+        <Inp label="Xác nhận mật khẩu mới" type="password" value={cfmPw} onChange={e=>setCfmPw(e.target.value)} placeholder="Nhập lại..."/>
+        <Btn full onClick={changePw} bg={G}>Đổi mật khẩu</Btn>
+      </div>}
+      {pwMsg&&<div style={{marginTop:6,fontSize:12,fontWeight:600,color:pwMsg.includes("✅")?G:R}}>{pwMsg}</div>}
+    </Card>
+  </div>;
+}
+
+/* TEACHER POLICY VIEWER */
+function TPolicyView({data}){
+  const bp=data.bonusPolicy;
+  return <div style={{padding:14}}>
+    <Card style={{border:`2px solid ${G}`,marginBottom:14}}>
+      <div style={{fontSize:14,fontWeight:800,color:G,marginBottom:10}}>🎁 A — THƯỞNG</div>
+      {[
+        {title:"HỌC VIÊN TÁI ĐĂNG KÝ",amount:`${fmt(bp.renewalBonus||200000)}/bé`,cond:"Đã tiếp nhận HV ít nhất 2 tháng. Có làm đầy đủ các bước chăm sóc, tổng kết cho PH cuối khóa. Không áp dụng GV thử việc 2 tháng đầu."},
+        {title:"TỈ LỆ CHUYÊN CẦN HV ≥"+`${bp.kpiAttThreshold||95}%`,amount:`${fmt(bp.kpiAttBonus||100000)}/tháng`,cond:"Chủ động sắp xếp học bù với PH và nhắc nhở HV đi học đều và đúng giờ."},
+        {title:"DẪN 1 HỌC THỬ",amount:`${fmt(bp.trialBringBonus||100000)}/bé`,cond:"Bé chưa từng học/ học thử tại WOW ART."},
+        {title:"HV HỌC THỬ → ĐĂNG KÝ CHÍNH THỨC",amount:`${fmt(bp.trialConvertBonus||500000)}/bé`,cond:"Bé học thử đó đăng ký học chính thức tại WOW ART."},
+        {title:"DẠY HỌC THỬ THÀNH CÔNG",amount:`${fmt(bp.trialTeachBonus||100000)}/bé`,cond:"Bé đóng tiền sau học thử."},
+        {title:"DỰ GIỜ ĐẠT ≥80%",amount:`${fmt(bp.obsBonus||500000)}/quý`,cond:"Điểm dự giờ trung bình ≥80%. Tính theo quý, chia đều 3 tháng."},
+      ].map((r,i)=><div key={i} style={{padding:"10px 0",borderBottom:"1px solid #E6FFED"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <span style={{fontWeight:700,fontSize:12,color:"#1a1a2e"}}>{r.title}</span>
+          <Badge bg={G+"15"} color={G}>{r.amount}</Badge>
+        </div>
+        <div style={{fontSize:11,color:"#666",lineHeight:1.5}}>{r.cond}</div>
+      </div>)}
+    </Card>
+    <Card style={{border:`2px solid ${R}`}}>
+      <div style={{fontSize:14,fontWeight:800,color:R,marginBottom:10}}>⚠️ B — PHẠT</div>
+      <div style={{padding:"10px 0",borderBottom:"1px solid #FEE2E2"}}>
+        <div style={{fontWeight:700,fontSize:12,color:"#1a1a2e",marginBottom:4}}>TỈ LỆ CHUYÊN CẦN GIÁO VIÊN</div>
+        <div style={{fontSize:11,color:"#666",lineHeight:1.5,marginBottom:6}}>Đi trễ và nghỉ báo gấp (không có lý do chính đáng hoặc trường hợp bất khả kháng):</div>
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+            <Badge bg={O+"15"} color={O}>Lần 1</Badge><span>Nhắc nhở (không trừ lương)</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+            <Badge bg={R+"15"} color={R}>Lần 2</Badge><span>Trừ {fmt(bp.latePenalty2||50000)}/ca</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12}}>
+            <Badge bg={R+"15"} color={R}>Lần 3+</Badge><span>Trừ {fmt(bp.latePenalty3||100000)}/ca</span>
+          </div>
+        </div>
+      </div>
     </Card>
   </div>;
 }
