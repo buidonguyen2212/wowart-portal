@@ -811,8 +811,22 @@ function ATeachers({data,save,canEdit=true,fullData,scopeCenterIds}){
   const fullTeachers=activeTeachers.filter(t=>(t.employType||"part")==="full");
   const partTeachers=activeTeachers.filter(t=>(t.employType||"part")==="part");
 
+  const exportTeachers=()=>{
+    const aoa=[["STT","Mã GV","Họ và tên","Loại hình","Cấp bậc","SĐT","Ngày sinh","Học vấn","Chứng chỉ","Ngày vào WA","Trạng thái","Lương cố định","Baseline ca/th","OT B2C/buổi","OT B2B/buổi","Lương B2C/buổi","Lương B2B/buổi","Điểm dạy","Ngân hàng","Số TK","Tên chủ TK"]];
+    scopedTeachers.forEach((t,i)=>{
+      const cNames=(t.centerIds||[]).map(cid=>data.centers.find(c=>c.id===cid)?.name||cid).join(", ");
+      const isFull=(t.employType||"part")==="full";
+      aoa.push([i+1,t.id,t.name,isFull?"Full-time":"Part-time",t.level||"standard",t.phone||"",t.dob||"",t.education||"",t.certificate||"",t.joinDate||"",(t.status||"active")==="active"?"Đang làm":"Đã nghỉ",isFull?t.fixedSalary||0:"—",isFull?t.baselineSessions||32:"—",isFull?t.otRateB2C||0:"—",isFull?t.otRateB2B||0:"—",!isFull?t.salaryB2C||0:"—",!isFull?t.salaryB2B||0:"—",cNames,t.bankName||"",t.bankAccount||"",t.bankHolder||""]);
+    });
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"]=[{wch:5},{wch:12},{wch:22},{wch:12},{wch:12},{wch:14},{wch:14},{wch:20},{wch:16},{wch:14},{wch:12},{wch:16},{wch:14},{wch:14},{wch:14},{wch:16},{wch:16},{wch:18},{wch:16},{wch:18},{wch:20}];
+    XLSX.utils.book_append_sheet(wb,ws,"Danh sách giáo viên");
+    XLSX.writeFile(wb,`DanhSachGV_WowArt_${td()}.xlsx`);
+  };
+
   return <div style={{padding:14}}>
-    <Sec title={`Giáo viên (${scopedTeachers.length})`} action={canEdit&&<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}>
+    <Sec title={`Giáo viên (${scopedTeachers.length})`} action={<div style={{display:"flex",gap:4}}><Btn small onClick={exportTeachers} bg="#059669">📥 Xuất</Btn>{canEdit&&<Btn small onClick={()=>{setForm(empty);setEdit(null);setShow(!show);}}>{show?"Đóng":"+ Thêm"}</Btn>}</div>}>
       {show&&<Card style={{border:`2px solid ${B}`,marginBottom:14}}>
         <Inp label="Họ và tên *" value={form.name} onChange={e=>f("name",e.target.value)}/>
         <Inp label="Số di động (mật khẩu) *" type="tel" value={form.phone} onChange={e=>f("phone",e.target.value)}/>
@@ -1195,7 +1209,21 @@ function AStudents({data,save,centerId}){
     save({...data,students:data.students.map(s=>s.id===id?{...s,status:st}:s),sessions:newSessions});
   };
 
-  return <Sec title={`Học viên — ${sts.length}`} action={<Btn small onClick={()=>setShow(!show)}>{show?"Đóng":"+ Thêm HV"}</Btn>}>
+  const exportStudents=()=>{
+    const cName=data.centers.find(c=>c.id===centerId)?.name||centerId;
+    const aoa=[["STT","Mã HV","Họ tên bé","Giới tính","Ngày sinh","Tuổi","Trình độ","Tên phụ huynh","SĐT phụ huynh","Ngày nhập học","Ngày hết khóa","Trạng thái","Học thử","Trung tâm","Ghi chú"]];
+    sts.forEach((s,i)=>{
+      const age=s.dob?Math.floor((new Date()-new Date(s.dob))/31557600000):"";
+      aoa.push([i+1,s.id,s.name,s.gender||"",s.dob||"",age,s.studentLevel||"",s.parentName||"",s.parentPhone||"",s.enrollDate||"",s.expiryDate||"",s.status||"",s.isTrial?"Trial":"Không",cName,s.notes||""]);
+    });
+    const wb=XLSX.utils.book_new();
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"]=[{wch:5},{wch:14},{wch:22},{wch:10},{wch:14},{wch:7},{wch:10},{wch:20},{wch:16},{wch:14},{wch:14},{wch:14},{wch:10},{wch:14},{wch:28}];
+    XLSX.utils.book_append_sheet(wb,ws,`HV_${cName}`);
+    XLSX.writeFile(wb,`DanhSachHV_${cName}_${td()}.xlsx`);
+  };
+
+  return <Sec title={`Học viên — ${sts.length}`} action={<div style={{display:"flex",gap:4}}><Btn small onClick={exportStudents} bg="#059669">📥 Xuất</Btn><Btn small onClick={()=>setShow(!show)}>{show?"Đóng":"+ Thêm HV"}</Btn></div>}>
     {show&&<Card style={{border:`2px solid ${O}`}}>
       <Inp label="Họ tên bé *" value={form.name} onChange={e=>f("name",e.target.value)}/>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
@@ -2062,6 +2090,26 @@ function APolicy({data,save,showImportOnly=false}){
           <div style={{marginBottom:12,padding:14,background:"linear-gradient(135deg,#F0FDF4,#ECFDF5)",borderRadius:12,border:`2px solid ${G}`}}>
             <div style={{fontSize:13,fontWeight:800,color:G,marginBottom:6}}>📊 Import từ Excel (Khuyến nghị)</div>
             <div style={{fontSize:10,color:"#666",marginBottom:8}}>Dùng file <strong>WowArt_Data_Template.xlsx</strong> để nhập GV, HV, lớp 1 lần. Nhanh hơn nhập tay!</div>
+            <Btn full small onClick={()=>{
+              const wb=XLSX.utils.book_new();
+              // Sheet 1: Trung tâm
+              const wsTT=XLSX.utils.aoa_to_sheet([["ID (tự tạo)","Tên trung tâm","Loại (b2c/b2b)","Địa chỉ","SĐT","Ghi chú"],["c1","WOW ART Q7","b2c","Số X, Đường Y, Q7","0901234567",""],["b1","Trường ABC","b2b","Số 1 Đường Z","",""]]);
+              wsTT["!cols"]=[{wch:14},{wch:22},{wch:14},{wch:28},{wch:14},{wch:20}];
+              XLSX.utils.book_append_sheet(wb,wsTT,"Trung tâm");
+              // Sheet 2: Giáo viên
+              const wsGV=XLSX.utils.aoa_to_sheet([["ID","Họ tên","SĐT","Ngày sinh\n(YYYY-MM-DD)","Học vấn","Chứng chỉ Y3K","Ngày vào\n(YYYY-MM-DD)","Loại\n(full/part)","Trạng thái\n(active/inactive)","Level\n(junior/standard/senior)","Lương cố định\n(full only)","Baseline ca/th\n(full only)","OT B2C\n(full only)","OT B2B\n(full only)","Lương B2C/buổi","Lương B2B/buổi","Center IDs\n(cách bởi dấu ,)"],["t1","Nguyễn Thị Lan","0901234567","1995-03-15","ĐH Mỹ Thuật TPHCM","Y3K Level 2","2024-01-10","full","active","standard",9000000,32,165000,140000,165000,140000,"c1"],["t2","Trần Văn Minh","0912345678","1998-07-22","CĐ Sư phạm MT","Y3K Level 1","2025-06-01","part","active","junior",0,0,0,0,130000,110000,"c1,b1"]]);
+              wsGV["!cols"]=[{wch:8},{wch:22},{wch:14},{wch:18},{wch:20},{wch:16},{wch:18},{wch:12},{wch:20},{wch:22},{wch:20},{wch:18},{wch:14},{wch:14},{wch:16},{wch:16},{wch:20}];
+              XLSX.utils.book_append_sheet(wb,wsGV,"Giáo viên");
+              // Sheet 3: Học viên
+              const wsHV=XLSX.utils.aoa_to_sheet([["ID","Họ tên","Giới tính\n(Nam/Nữ)","Ngày sinh\n(YYYY-MM-DD)","Tên PH","SĐT PH","Ngày nhập học","Ngày hết khóa","Trạng thái","Center ID","Level","Is Trial\n(true/false)","Ghi chú"],["s1","Nguyễn Văn An","Nam","2018-05-10","Nguyễn Thị Lan","0987654321","2025-09-01","2026-04-30","Đang học","c1","Level 2","false","Bé thích vẽ động vật"],["s2","Trần Thị Bảo","Nữ","2017-11-20","Trần Văn Tuấn","0976543210","2025-10-15","2026-06-15","Đang học","c1","Level 3","false",""]]);
+              wsHV["!cols"]=[{wch:8},{wch:22},{wch:14},{wch:18},{wch:20},{wch:16},{wch:14},{wch:14},{wch:14},{wch:10},{wch:10},{wch:16},{wch:28}];
+              XLSX.utils.book_append_sheet(wb,wsHV,"Học viên");
+              // Sheet 4: Lớp học
+              const wsLop=XLSX.utils.aoa_to_sheet([["ID","Center ID","Teacher ID","Thứ\n(0=CN,1=T2...6=T7)","Số ca","Giờ bắt đầu","Giờ kết thúc","Level","HV IDs\n(cách bởi dấu ,)"],["cl1","c1","t1",6,1,"09:00","10:30","Level 2","s1,s2"]]);
+              wsLop["!cols"]=[{wch:10},{wch:10},{wch:12},{wch:22},{wch:8},{wch:12},{wch:12},{wch:10},{wch:24}];
+              XLSX.utils.book_append_sheet(wb,wsLop,"Lớp học");
+              XLSX.writeFile(wb,"WowArt_Data_Template.xlsx");
+            }} bg="#0EA5E9" style={{marginBottom:8}}>📋 Tải Template Mẫu (.xlsx)</Btn>
             <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{fontSize:11,marginBottom:6,width:"100%"}}/>
             {xlsxLoading&&<div style={{textAlign:"center",padding:10,color:B,fontSize:12}}>⏳ Đang đọc file...</div>}
             {xlsxPreview&&<div style={{marginTop:8}}>
@@ -2373,32 +2421,56 @@ function APayroll({data,save,canEdit=true,showBank=false,scopeCenterIds}){
   const confirmed=scopedTeachers.filter(t=>data.confirmations[`${t.id}_${mo}`]).length;
 
   const exportXLS=()=>{
-    const rows=[
-      ["BẢNG LƯƠNG GIÁO VIÊN — WOW ART"],
-      ["Tháng:",mo],[],
-      ["--- GV FULL-TIME ---"],
-      ["Họ tên","Loại","Cấp bậc","Lương cố định","Số ca","Baseline","Ca OT","Lương OT","KPI(%)","Thưởng KPI","Trial","Thưởng trial","Ref","Thưởng ref","TĐK","Thưởng TĐK","Thưởng DG","TỔNG","XN"]
-    ];
-    fullTs.forEach(t=>{
-      const c=calcT(t);const ck=`${t.id}_${mo}`;
-      rows.push([t.name,"Full-time",t.level,c.fixedPay,c.sessionCount,c.baselineSessions,c.otSessions,c.sessionPay,c.avgAtt,c.kpiAtt,c.trialConv,c.trialBonus,c.refCount,c.refBonus,c.renewalCount,c.renewalBonus,c.obsBonus,c.total,data.confirmations[ck]?"Đã XN":"Chưa"]);
+    const wb=XLSX.utils.book_new();
+    // ---- Sheet 1: BẢNG LƯƠNG TỔNG HỢP ----
+    const aoa=[];
+    const fmtN=n=>(n||0); // keep as number for XLSX
+    // Title rows
+    aoa.push(["BẢNG LƯƠNG GIÁO VIÊN — WOW ART"]);
+    aoa.push([`Tháng: ${mo}`]);
+    aoa.push([`Xuất ngày: ${new Date().toLocaleDateString("vi-VN")}`]);
+    aoa.push([]);
+    // === FULL-TIME ===
+    if(fullTs.length>0){
+      aoa.push(["▌ GIÁO VIÊN FULL-TIME"]);
+      const hdr=["STT","Họ và tên","Cấp bậc","Lương cố định","Số ca thực tế","Baseline","Ca OT","Lương OT","Chuyên cần HV (%)","Thưởng chuyên cần","Dẫn HT / Trial→ĐK","Thưởng trial","Referral","Thưởng referral","HV tái ĐK","Thưởng tái ĐK","Thưởng dự giờ","Phạt trễ","TỔNG LƯƠNG","Xác nhận"];
+      aoa.push(hdr);
+      fullTs.forEach((t,i)=>{
+        const c=calcT(t);const ck=`${t.id}_${mo}`;
+        aoa.push([i+1,t.name,t.level,fmtN(c.fixedPay),fmtN(c.sessionCount),fmtN(c.baselineSessions),fmtN(c.otSessions),fmtN(c.sessionPay),c.avgAtt,fmtN(c.kpiAtt),`${c.trialBrought||0} / ${c.trialConv}`,fmtN(c.trialBonus),fmtN(c.refCount),fmtN(c.refBonus),fmtN(c.renewalCount),fmtN(c.renewalBonus),fmtN(c.obsBonus),fmtN(c.penalty||0),fmtN(c.total),data.confirmations[ck]?"✅ Đã XN":"⏳ Chưa"]);
+      });
+      aoa.push(["","","","","","","","","","","","","","","","","","TỔNG FULL-TIME",fmtN(fullTotal),""]);
+      aoa.push([]);
+    }
+    // === PART-TIME ===
+    if(partTs.length>0){
+      aoa.push(["▌ GIÁO VIÊN PART-TIME"]);
+      const hdr2=["STT","Họ và tên","Cấp bậc","—","Số buổi B2C","Số buổi B2B","—","Lương buổi","Chuyên cần HV (%)","Thưởng chuyên cần","Dẫn HT / Trial→ĐK","Thưởng trial","Referral","Thưởng referral","HV tái ĐK","Thưởng tái ĐK","Thưởng dự giờ","Phạt trễ","TỔNG LƯƠNG","Xác nhận"];
+      aoa.push(hdr2);
+      partTs.forEach((t,i)=>{
+        const c=calcT(t);const ck=`${t.id}_${mo}`;
+        const sessB2C=data.sessions.filter(s=>s.teacherId===t.id&&mk(s.date)===mo&&s.locType!=="b2b").length;
+        const sessB2B=data.sessions.filter(s=>s.teacherId===t.id&&mk(s.date)===mo&&s.locType==="b2b").length;
+        aoa.push([i+1,t.name,t.level,"—",fmtN(sessB2C),fmtN(sessB2B),"—",fmtN(c.sessionPay),c.avgAtt,fmtN(c.kpiAtt),`${c.trialBrought||0} / ${c.trialConv}`,fmtN(c.trialBonus),fmtN(c.refCount),fmtN(c.refBonus),fmtN(c.renewalCount),fmtN(c.renewalBonus),fmtN(c.obsBonus),fmtN(c.penalty||0),fmtN(c.total),data.confirmations[ck]?"✅ Đã XN":"⏳ Chưa"]);
+      });
+      aoa.push(["","","","","","","","","","","","","","","","","","TỔNG PART-TIME",fmtN(partTotal),""]);
+      aoa.push([]);
+    }
+    aoa.push(["","","","","","","","","","","","","","","","","","TỔNG CHI LƯƠNG THÁNG "+mo,fmtN(grandTotal),""]);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    // Column widths
+    ws["!cols"]=[{wch:5},{wch:22},{wch:12},{wch:16},{wch:16},{wch:12},{wch:10},{wch:14},{wch:18},{wch:18},{wch:22},{wch:15},{wch:12},{wch:16},{wch:12},{wch:16},{wch:16},{wch:12},{wch:16},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,ws,"Bảng lương "+mo);
+    // ---- Sheet 2: CHI TIẾT NGÂN HÀNG ----
+    const aoa2=[["STT","Họ và tên","Ngân hàng","Số tài khoản","Tên chủ TK","Số tiền cần CK","Tháng","Ghi chú"]];
+    scopedTeachers.forEach((t,i)=>{
+      const c=calcT(t);
+      aoa2.push([i+1,t.name,t.bankName||"—",t.bankAccount||"—",t.bankHolder||"—",fmtN(c.total),mo,""]);
     });
-    rows.push([]);
-    rows.push(["--- GV PART-TIME ---"]);
-    rows.push(["Họ tên","Loại","Cấp bậc","","Số buổi","","","Lương buổi","KPI(%)","Thưởng KPI","Trial","Thưởng trial","Ref","Thưởng ref","TĐK","Thưởng TĐK","Thưởng DG","TỔNG","XN"]);
-    partTs.forEach(t=>{
-      const c=calcT(t);const ck=`${t.id}_${mo}`;
-      rows.push([t.name,"Part-time",t.level,"",c.sessionCount,"","",c.sessionPay,c.avgAtt,c.kpiAtt,c.trialConv,c.trialBonus,c.refCount,c.refBonus,c.renewalCount,c.renewalBonus,c.obsBonus,c.total,data.confirmations[ck]?"Đã XN":"Chưa"]);
-    });
-    rows.push([]);
-    rows.push(["","","","","","","","","","","","","","","","","TỔNG FULL",fullTotal,""]);
-    rows.push(["","","","","","","","","","","","","","","","","TỔNG PART",partTotal,""]);
-    rows.push(["","","","","","","","","","","","","","","","","TỔNG CHI",grandTotal,""]);
-    const bom="\uFEFF";
-    const csv=rows.map(r=>r.map(c=>{const s=String(c==null?"":c);return s.includes(",")||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;}).join(",")).join("\n");
-    const blob=new Blob([bom+csv],{type:"text/csv;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");a.href=url;a.download=`BangLuong_WowArt_${mo}.csv`;a.click();URL.revokeObjectURL(url);
+    const ws2=XLSX.utils.aoa_to_sheet(aoa2);
+    ws2["!cols"]=[{wch:5},{wch:22},{wch:16},{wch:18},{wch:22},{wch:18},{wch:10},{wch:20}];
+    XLSX.utils.book_append_sheet(wb,ws2,"Thông tin chuyển khoản");
+    XLSX.writeFile(wb,`BangLuong_WowArt_${mo}.xlsx`);
   };
 
   const renderCard=(t)=>{
@@ -2447,7 +2519,7 @@ function APayroll({data,save,canEdit=true,showBank=false,scopeCenterIds}){
   return <div style={{padding:14}}>
     <div style={{display:"flex",gap:6,marginBottom:12}}>
       <input type="month" value={mo} onChange={e=>setMo(e.target.value)} style={{flex:1,padding:"7px 12px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,fontWeight:600,boxSizing:"border-box"}}/>
-      <Btn small onClick={exportXLS} bg={G}>📥 Xuất CSV</Btn>
+      <Btn small onClick={exportXLS} bg={G}>📥 Xuất Excel</Btn>
     </div>
 
     {/* Full-time */}
