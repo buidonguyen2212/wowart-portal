@@ -173,9 +173,11 @@ export default function App(){return <ErrorBoundary><AppInner/></ErrorBoundary>;
 function AppInner(){
   const[data,setData]=useState(null);
   const[loading,setLoading]=useState(true);
-  const[role,setRole]=useState(null);// "ceo","admin_center","academic","accountant","teacher"
-  const[user,setUser]=useState(null);// {id,name,role,centerIds?}
+  const[role,setRole]=useState(null);
+  const[user,setUser]=useState(null);
   const[tab,setTab]=useState("");
+  const[showChgPw,setShowChgPw]=useState(false);
+  const[cpOld,setCpOld]=useState("");const[cpNew,setCpNew]=useState("");const[cpCfm,setCpCfm]=useState("");const[cpMsg,setCpMsg]=useState("");
 
   useEffect(()=>{
     const unsub=onDataChange((val)=>{
@@ -183,7 +185,6 @@ function AppInner(){
       parsed.centers=(parsed.centers||[]).map(c=>({...c,type:c.type||"b2c"}));
       parsed.teachers=(parsed.teachers||[]).map(t=>({...t,employType:t.employType||"part",status:t.status||"active",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B,bankName:t.bankName||"",bankAccount:t.bankAccount||"",bankHolder:t.bankHolder||""}));
       parsed.users=parsed.users||initData().users;
-      // Migration: ensure admin_all role exists
       if(!parsed.users.find(u=>u.role==="admin_all")){
         parsed.users.push({id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wowart@789"});
       }
@@ -208,8 +209,6 @@ function AppInner(){
   if(role&&!user)return <StaffLogin data={data} roleType={role} onLogin={u=>{setUser(u);setTab(role==="teacher"?"attendance":"dashboard");}} onBack={()=>setRole(null)}/>;
 
   const logout=()=>{setRole(null);setUser(null);setTab("");};
-  const[showChgPw,setShowChgPw]=useState(false);
-  const[cpOld,setCpOld]=useState("");const[cpNew,setCpNew]=useState("");const[cpCfm,setCpCfm]=useState("");const[cpMsg,setCpMsg]=useState("");
   const changeStaffPw=()=>{
     if(!R_TCH){// staff user
       const u=(data.users||[]).find(x=>x.id===user.id);
