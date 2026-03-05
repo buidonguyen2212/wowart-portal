@@ -235,11 +235,11 @@ function AppInner(){
 
   // Tab configs per role
   const ceoTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"}];
-  const allTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"import",label:"Import",icon:"📤"},{key:"users",label:"Users",icon:"👥"}];
-  const admTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"payroll",label:"Bảng lương",icon:"💰"}];
-  const acaTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"obs",label:"Dự giờ",icon:"👁"},{key:"payroll",label:"Xem lương",icon:"💰"}];
+  const allTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"attstat",label:"Chuyên cần",icon:"📈"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"policy",label:"Chính sách",icon:"⚙️"},{key:"payroll",label:"Bảng lương",icon:"💰"},{key:"import",label:"Import",icon:"📤"},{key:"users",label:"Users",icon:"👥"}];
+  const admTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"attstat",label:"Chuyên cần",icon:"📈"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"payroll",label:"Bảng lương",icon:"💰"}];
+  const acaTabs=[{key:"dashboard",label:"Tổng quan",icon:"📊"},{key:"ai",label:"AI Agent",icon:"🤖"},{key:"teachers",label:"Giáo viên",icon:"👩‍🏫"},{key:"classes",label:"Lớp & HV",icon:"📚"},{key:"attstat",label:"Chuyên cần",icon:"📈"},{key:"renewals",label:"Tái ĐK",icon:"🔄"},{key:"referrals",label:"Referral",icon:"🎯"},{key:"obs",label:"Dự giờ",icon:"👁"},{key:"payroll",label:"Xem lương",icon:"💰"}];
   const accTabs=[{key:"payroll",label:"Bảng lương",icon:"💰"}];
-  const teacherTabs=[{key:"attendance",label:"Điểm danh",icon:"📋"},{key:"schedule",label:"Lịch dạy",icon:"📅"},{key:"history",label:"Lịch sử",icon:"🕐"},{key:"salary",label:"Lương",icon:"💰"},{key:"policy",label:"Quy định",icon:"📜"},{key:"profile",label:"Hồ sơ",icon:"👤"}];
+  const teacherTabs=[{key:"attendance",label:"Điểm danh",icon:"📋"},{key:"mystudents",label:"Lớp & HV",icon:"👶"},{key:"attstat",label:"Thống kê",icon:"📈"},{key:"schedule",label:"Lịch dạy",icon:"📅"},{key:"history",label:"Lịch sử",icon:"🕐"},{key:"salary",label:"Lương",icon:"💰"},{key:"policy",label:"Quy định",icon:"📜"},{key:"profile",label:"Hồ sơ",icon:"👤"}];
   const tabs=R_CEO?ceoTabs:R_ALL?allTabs:R_ADM?admTabs:R_ACA?acaTabs:R_ACC?accTabs:teacherTabs;
 
   const roleLabel=R_CEO?"👑 CEO":R_ALL?"🔑 Admin Tổng":R_ADM?`📋 ${user.name}`:R_ACA?"🎓 Academic":R_ACC?"💰 Kế toán":user?.name;
@@ -281,6 +281,7 @@ function AppInner(){
           {tab==="ai"&&<AAIAgent data={data}/>}
           {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={true}/>}
           {tab==="classes"&&<AClasses data={data} save={save} canEdit={true}/>}
+          {tab==="attstat"&&<AttStat data={data} userRole={role} userId={null}/>}
           {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={true}/>}
           {tab==="referrals"&&<ARefr data={data} save={save} canEdit={true}/>}
           {tab==="policy"&&<APolicy data={data} save={save}/>}
@@ -293,6 +294,7 @@ function AppInner(){
           {tab==="dashboard"&&<ADash data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
           {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
           {tab==="classes"&&<AClasses data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
+          {tab==="attstat"&&<AttStat data={data} userRole={role} userId={null} scopeCenterIds={user.centerIds}/>}
           {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
           {tab==="referrals"&&<ARefr data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
           {tab==="payroll"&&<APayroll data={data} save={save} canEdit={true} scopeCenterIds={user.centerIds}/>}
@@ -303,6 +305,7 @@ function AppInner(){
           {tab==="ai"&&<AAIAgent data={data}/>}
           {tab==="teachers"&&<ATeachers data={data} save={save} canEdit={false}/>}
           {tab==="classes"&&<AClasses data={data} save={save} canEdit={false}/>}
+          {tab==="attstat"&&<AttStat data={data} userRole={role} userId={null}/>}
           {tab==="renewals"&&<ARenewals data={data} save={save} canEdit={false}/>}
           {tab==="referrals"&&<ARefr data={data} save={save} canEdit={false}/>}
           {tab==="obs"&&<AObs data={data} save={save}/>}
@@ -315,6 +318,8 @@ function AppInner(){
         {/* Teacher */}
         {R_TCH&&<>
           {tab==="attendance"&&<TAtt data={data} save={save} user={user}/>}
+          {tab==="mystudents"&&<TMyStudents data={data} save={save} user={user}/>}
+          {tab==="attstat"&&<AttStat data={data} userRole={role} userId={user.id}/>}
           {tab==="schedule"&&<TSchedule data={data} user={user}/>}
           {tab==="history"&&<THist data={data} user={user}/>}
           {tab==="salary"&&<TSalary data={data} save={save} user={user}/>}
@@ -2667,6 +2672,20 @@ function TAtt({data,save,user}){
     return result;
   };
 
+  const canCheckInNow=(cl)=>{
+    // 1. Only allow check-in on the ACTUAL today
+    if(selDate!==td())return{ok:false,reason:"Chỉ được check-in đúng ngày hôm nay"};
+    // 2. Time window: from 30 min BEFORE class start to 60 min AFTER class start
+    const now=new Date();
+    const[h,m]=(cl.startTime||"00:00").split(":").map(Number);
+    const classStart=new Date();classStart.setHours(h,m,0,0);
+    const earliest=new Date(classStart.getTime()-30*60000);
+    const latest=new Date(classStart.getTime()+60*60000);
+    if(now<earliest)return{ok:false,reason:`Chưa đến giờ — có thể check-in từ ${earliest.getHours().toString().padStart(2,"0")}:${earliest.getMinutes().toString().padStart(2,"0")}`};
+    if(now>latest)return{ok:false,reason:`Đã quá giờ cho phép check-in (${cl.startTime}+60 phút)`};
+    return{ok:true,reason:""};
+  };
+
   const doCheckIn=(cl,locType)=>{
     const cid=cl.centerId;
     const prepped=lessonPrepped[cl.id]||false;
@@ -2786,8 +2805,7 @@ function TAtt({data,save,user}){
         </div>
 
         <div style={{padding:"10px 12px"}}>
-          {/* NOT STARTED — show prep + check-in */}
-          {notStarted&&<>
+            {notStarted&&<>
             <div style={{fontSize:11,fontWeight:600,color:"#888",marginBottom:4}}>Danh sách HV:</div>
             {activeStudentIds.map(sid=>{
               const s=data.students.find(x=>x.id===sid);if(!s)return null;
@@ -2800,7 +2818,13 @@ function TAtt({data,save,user}){
                 <button onClick={()=>setLessonPrepped(p=>({...p,[cl.id]:false}))} style={{flex:1,padding:"7px 8px",borderRadius:7,border:`2px solid ${lessonPrepped[cl.id]===false?R:"#E2E8F0"}`,background:lessonPrepped[cl.id]===false?R+"10":W,color:lessonPrepped[cl.id]===false?R:"#888",fontWeight:700,cursor:"pointer",fontSize:11}}>❌ Chưa soạn</button>
               </div>
             </div>
-            <Btn full onClick={()=>doCheckIn(cl,locType)} bg={accent} style={{marginTop:8}}>⏰ CHECK-IN Ca {cl.caNumber}</Btn>
+            {(()=>{const{ok,reason}=canCheckInNow(cl);return ok
+              ?<Btn full onClick={()=>doCheckIn(cl,locType)} bg={accent} style={{marginTop:8}}>⏰ CHECK-IN Ca {cl.caNumber}</Btn>
+              :<div style={{marginTop:8,padding:"10px 12px",borderRadius:9,background:"#F1F5F9",textAlign:"center"}}>
+                  <div style={{fontSize:11,color:"#94A3B8",fontWeight:600}}>🔒 {reason}</div>
+                  {selDate!==td()&&<div style={{fontSize:10,color:"#CBD5E1",marginTop:3}}>Chọn đúng ngày hôm nay để check-in</div>}
+                </div>;
+            })()}
           </>}
 
           {/* CHECKED IN — show attendance + report + checkout */}
@@ -3130,7 +3154,313 @@ function TProf({data,save,user}){
   </div>;
 }
 
-/* TEACHER POLICY VIEWER */
+/* ============================================================
+   TEACHER: MY STUDENTS & CLASSES — notes, search, overview
+   ============================================================ */
+function TMyStudents({data,save,user}){
+  const myClasses=data.classes.filter(c=>c.teacherId===user.id);
+  const[search,setSearch]=useState("");
+  const[selCl,setSelCl]=useState(null);
+  const[noteEdit,setNoteEdit]=useState({});// {studentId: text}
+  const[saving,setSaving]=useState({});
+
+  // All unique student IDs across my classes
+  const allMyStudentIds=[...new Set(myClasses.flatMap(c=>c.studentIds||[]))];
+  const allMyStudents=allMyStudentIds.map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
+  const filtered=allMyStudents.filter(s=>!search||s.name.toLowerCase().includes(search.toLowerCase())||s.parentName?.toLowerCase().includes(search.toLowerCase())||s.parentPhone?.includes(search));
+
+  const saveNote=(sid,note)=>{
+    setSaving(p=>({...p,[sid]:true}));
+    const updated=data.students.map(s=>s.id===sid?{...s,teacherNote:note}:s);
+    save({...data,students:updated});
+    setTimeout(()=>setSaving(p=>({...p,[sid]:false})),800);
+  };
+
+  // Sessions for each student in my classes
+  const getStudentStats=(sid)=>{
+    const mySessions=data.sessions.filter(s=>s.teacherId===user.id&&s.checkOut);
+    let present=0,absent=0,late=0;
+    mySessions.forEach(ses=>{
+      const att=(ses.attendance||[]).find(a=>a.studentId===sid);
+      if(!att)return;
+      if(att.present){
+        // Check lateness: compare checkIn time vs class startTime
+        if(ses.checkIn&&ses.classStartTime){
+          const ci=new Date(ses.checkIn);const ciMin=ci.getHours()*60+ci.getMinutes();
+          const[ch,cm]=(ses.classStartTime||"00:00").split(":").map(Number);
+          // Student is considered late if session started >10min after class time (proxy)
+        }
+        present++;
+      }else{absent++;}
+    });
+    const total=present+absent;
+    const rate=total>0?Math.round(present/total*100):null;
+    return{present,absent,total,rate};
+  };
+
+  return <div style={{padding:14}}>
+    <div style={{marginBottom:12}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm tên bé, tên PH, SĐT..." style={{width:"100%",padding:"9px 12px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,boxSizing:"border-box"}}/>
+    </div>
+
+    {/* Class filter chips */}
+    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:12}}>
+      <button onClick={()=>setSelCl(null)} style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${!selCl?B:"#E2E8F0"}`,background:!selCl?B+"10":W,color:!selCl?B:"#888",fontWeight:600,cursor:"pointer",fontSize:11}}>Tất cả ({allMyStudents.length})</button>
+      {myClasses.map(cl=>{
+        const cn=data.centers.find(c=>c.id===cl.centerId);
+        const count=(cl.studentIds||[]).length;
+        return <button key={cl.id} onClick={()=>setSelCl(selCl===cl.id?null:cl.id)} style={{padding:"4px 10px",borderRadius:20,border:`1.5px solid ${selCl===cl.id?B:"#E2E8F0"}`,background:selCl===cl.id?B+"10":W,color:selCl===cl.id?B:"#888",fontWeight:600,cursor:"pointer",fontSize:11}}>
+          {cn?.name} {DAYS[cl.day]} {cl.startTime} ({count})
+        </button>;
+      })}
+    </div>
+
+    {/* Student cards */}
+    {filtered.filter(s=>!selCl||(myClasses.find(c=>c.id===selCl)?.studentIds||[]).includes(s.id)).map(s=>{
+      const stats=getStudentStats(s.id);
+      const note=noteEdit[s.id]!==undefined?noteEdit[s.id]:(s.teacherNote||"");
+      const inClass=myClasses.find(c=>(c.studentIds||[]).includes(s.id));
+      const cn=inClass?data.centers.find(c=>c.id===inClass.centerId):null;
+      const age=s.dob?Math.floor((new Date()-new Date(s.dob))/31557600000):"?";
+      const rateColor=stats.rate===null?"#888":stats.rate>=90?G:stats.rate>=75?O:R;
+      return <Card key={s.id} style={{borderLeft:`3px solid ${rateColor}`,padding:0,overflow:"hidden"}}>
+        <div style={{padding:"10px 12px",background:s.status==="Đang học"?G+"05":O+"08"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:13}}>{s.name} <span style={{fontSize:10,color:"#888"}}>{age} tuổi • {s.gender}</span></div>
+              <div style={{fontSize:11,color:"#888",marginTop:1}}>PH: {s.parentName||"—"} • {s.parentPhone||"—"}</div>
+              <div style={{fontSize:10,color:"#888"}}>{cn?.name} • {s.studentLevel||"—"} <Badge bg={s.status==="Đang học"?G+"12":O+"12"} color={s.status==="Đang học"?G:O}>{s.status}</Badge></div>
+            </div>
+            <div style={{textAlign:"center",minWidth:44}}>
+              {stats.rate!==null?<>
+                <div style={{fontSize:18,fontWeight:800,color:rateColor}}>{stats.rate}%</div>
+                <div style={{fontSize:9,color:"#888"}}>{stats.present}/{stats.total} buổi</div>
+              </>:<div style={{fontSize:10,color:"#CBD5E1"}}>Chưa có</div>}
+            </div>
+          </div>
+        </div>
+        <div style={{padding:"8px 12px"}}>
+          <label style={{fontSize:10,fontWeight:600,color:"#7C3AED",display:"block",marginBottom:3}}>📝 Ghi chú giáo viên (chỉ GV thấy)</label>
+          <textarea value={note} onChange={e=>setNoteEdit(p=>({...p,[s.id]:e.target.value}))} placeholder="Tính cách bé, điểm mạnh/yếu, style sáng tạo, lưu ý cho GV sau..." style={{width:"100%",padding:6,borderRadius:7,border:"1.5px solid #E2E8F0",fontSize:11,minHeight:44,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:4}}>
+            <div style={{fontSize:10,color:"#888"}}>Nhập học: {s.enrollDate||"—"} → Hết: {s.expiryDate||"—"}</div>
+            <button onClick={()=>saveNote(s.id,note)} style={{padding:"4px 10px",borderRadius:7,border:`1px solid ${G}`,background:saving[s.id]?G:G+"10",color:saving[s.id]?W:G,fontSize:10,fontWeight:700,cursor:"pointer"}}>{saving[s.id]?"✓ Đã lưu":"Lưu"}</button>
+          </div>
+          {s.notes&&<div style={{fontSize:10,color:B,marginTop:3,fontStyle:"italic",padding:"3px 6px",background:B+"08",borderRadius:5}}>📌 Admin: {s.notes}</div>}
+        </div>
+      </Card>;
+    })}
+    {filtered.length===0&&<Card style={{textAlign:"center",padding:20}}><div style={{fontSize:28}}>🔍</div><div style={{color:"#888",fontSize:12,marginTop:6}}>Không tìm thấy học viên</div></Card>}
+  </div>;
+}
+
+/* ============================================================
+   ATTENDANCE STATISTICS — HV chuyên cần + GV đi trễ, dạy lố
+   ============================================================ */
+function AttStat({data,userRole,userId,scopeCenterIds}){
+  const[view,setView]=useState("student");// student | class | teacher
+  const[mo,setMo]=useState(mk());
+  const[search,setSearch]=useState("");
+  const isTeacher=userRole==="teacher";
+
+  const scopedTeachers=isTeacher?data.teachers.filter(t=>t.id===userId):scopeCenterIds?data.teachers.filter(t=>(t.centerIds||[]).some(c=>scopeCenterIds.includes(c))):data.teachers;
+  const scopedClasses=isTeacher?data.classes.filter(c=>c.teacherId===userId):scopeCenterIds?data.classes.filter(c=>scopeCenterIds.includes(c.centerId)):data.classes;
+  const moSessions=data.sessions.filter(s=>mk(s.date)===mo&&s.checkOut);
+
+  // ---- Student attendance stats ----
+  const studentStats=()=>{
+    const map={};
+    moSessions.forEach(ses=>{
+      const cl=scopedClasses.find(c=>c.id===ses.classId);if(!cl)return;
+      (ses.attendance||[]).forEach(a=>{
+        if(!map[a.studentId])map[a.studentId]={studentId:a.studentId,name:a.name,present:0,absent:0,sessions:[]};
+        if(a.present)map[a.studentId].present++;
+        else map[a.studentId].absent++;
+        map[a.studentId].sessions.push({date:ses.date,present:a.present,isTrial:a.isTrial});
+      });
+    });
+    return Object.values(map).map(x=>{
+      const total=x.present+x.absent;
+      const rate=total>0?Math.round(x.present/total*100):0;
+      const st=data.students.find(s=>s.id===x.studentId);
+      return{...x,total,rate,student:st};
+    }).sort((a,b)=>a.rate-b.rate);
+  };
+
+  // ---- Class stats ----
+  const classStats=()=>{
+    return scopedClasses.map(cl=>{
+      const cSess=moSessions.filter(s=>s.classId===cl.id);
+      let totalPresent=0,totalAbs=0;
+      cSess.forEach(ses=>{(ses.attendance||[]).forEach(a=>{if(a.present)totalPresent++;else totalAbs++;});});
+      const total=totalPresent+totalAbs;
+      const rate=total>0?Math.round(totalPresent/total*100):null;
+      const cn=data.centers.find(c=>c.id===cl.centerId);
+      const t=data.teachers.find(x=>x.id===cl.teacherId);
+      return{cl,cn,t,sessions:cSess.length,totalPresent,totalAbs,total,rate};
+    }).filter(x=>x.sessions>0||!isTeacher);
+  };
+
+  // ---- Teacher discipline stats ----
+  const teacherStats=()=>{
+    return scopedTeachers.map(t=>{
+      const tSess=moSessions.filter(s=>s.teacherId===t.id);
+      let lateCount=0,overtimeCount=0,noPrep=0;
+      const lateDetails=[];const overtimeDetails=[];
+      tSess.forEach(ses=>{
+        const cl=data.classes.find(c=>c.id===ses.classId);
+        // Late check-in: arrived >5min after class start
+        if(ses.checkIn&&ses.classStartTime){
+          const ci=new Date(ses.checkIn);const ciMin=ci.getHours()*60+ci.getMinutes();
+          const[ch,cm]=(ses.classStartTime||"00:00").split(":").map(Number);
+          const startMin=ch*60+cm;
+          const lateBy=ciMin-startMin;
+          if(lateBy>5){lateCount++;lateDetails.push({date:ses.date,lateBy});}
+        }
+        // Overtime: check-out > class endTime + 15 min
+        if(ses.checkOut&&cl?.endTime){
+          const co=new Date(ses.checkOut);const coMin=co.getHours()*60+co.getMinutes();
+          const[eh,em]=(cl.endTime||"00:00").split(":").map(Number);
+          const endMin=eh*60+em;
+          const overBy=coMin-endMin;
+          if(overBy>15){overtimeCount++;overtimeDetails.push({date:ses.date,overBy});}
+        }
+        // No lesson prep
+        if(ses.lessonPrepped===false)noPrep++;
+      });
+      return{t,sessionCount:tSess.length,lateCount,overtimeCount,noPrep,lateDetails,overtimeDetails};
+    }).filter(x=>x.sessionCount>0);
+  };
+
+  const RC=(r)=>r>=90?G:r>=75?O:R;
+  const tabs2=[{k:"student",l:"👶 Học viên"},{k:"class",l:"📚 Lớp học"},{k:"teacher",l:"👩‍🏫 Giáo viên"}];
+
+  return <div style={{padding:14}}>
+    {/* Header */}
+    <div style={{display:"flex",gap:6,marginBottom:12,alignItems:"center"}}>
+      <input type="month" value={mo} onChange={e=>setMo(e.target.value)} style={{flex:1,padding:"7px 10px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,fontWeight:600}}/>
+    </div>
+
+    {/* Sub-tabs */}
+    <div style={{display:"flex",gap:4,marginBottom:12}}>
+      {tabs2.filter(t=>!isTeacher||t.k!=="teacher").map(t=>(
+        <button key={t.k} onClick={()=>{setView(t.k);setSearch("");}} style={{flex:1,padding:"7px 4px",borderRadius:8,border:`1.5px solid ${view===t.k?B:"#E2E8F0"}`,background:view===t.k?B+"10":W,color:view===t.k?B:"#888",fontWeight:view===t.k?700:500,cursor:"pointer",fontSize:11}}>{t.l}</button>
+      ))}
+    </div>
+
+    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Tìm kiếm..." style={{width:"100%",padding:"8px 12px",borderRadius:8,border:"1.5px solid #E2E8F0",fontSize:12,boxSizing:"border-box",marginBottom:10}}/>
+
+    {/* ---- STUDENT VIEW ---- */}
+    {view==="student"&&(()=>{
+      const stats=studentStats().filter(x=>!search||x.name?.toLowerCase().includes(search.toLowerCase())||(x.student?.parentName||"").toLowerCase().includes(search.toLowerCase()));
+      const atRisk=stats.filter(x=>x.rate<75);
+      const ok=stats.filter(x=>x.rate>=75);
+      return <>
+        {atRisk.length>0&&<div style={{marginBottom:14}}>
+          <div style={{fontSize:12,fontWeight:800,color:R,marginBottom:6}}>⚠️ Cần chú ý — Chuyên cần &lt;75% ({atRisk.length} HV)</div>
+          {atRisk.map(x=>{
+            const st=x.student;
+            return <Card key={x.studentId} style={{borderLeft:`3px solid ${RC(x.rate)}`,padding:"8px 12px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:12}}>{x.name}</div>
+                  <div style={{fontSize:10,color:"#888"}}>PH: {st?.parentName||"—"} • {st?.parentPhone||"—"}</div>
+                  <div style={{display:"flex",gap:2,marginTop:3,flexWrap:"wrap"}}>
+                    {x.sessions.slice(-8).map((s,i)=><span key={i} style={{width:14,height:14,borderRadius:3,background:s.present?G:R,display:"inline-block",fontSize:7,color:W,textAlign:"center",lineHeight:"14px"}}>{s.present?"✓":"✗"}</span>)}
+                  </div>
+                </div>
+                <div style={{textAlign:"center"}}>
+                  <div style={{fontSize:22,fontWeight:800,color:RC(x.rate)}}>{x.rate}%</div>
+                  <div style={{fontSize:9,color:"#888"}}>{x.present}/{x.total}</div>
+                </div>
+              </div>
+            </Card>;
+          })}
+        </div>}
+        {ok.length>0&&<div>
+          <div style={{fontSize:12,fontWeight:700,color:G,marginBottom:6}}>✅ Đi học đều ({ok.length} HV)</div>
+          {ok.map(x=>(
+            <Card key={x.studentId} style={{borderLeft:`3px solid ${G}`,padding:"8px 12px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <div style={{fontWeight:600,fontSize:12}}>{x.name}</div>
+                  <div style={{fontSize:10,color:"#888"}}>{x.present}/{x.total} buổi có mặt</div>
+                  <div style={{display:"flex",gap:2,marginTop:3}}>
+                    {x.sessions.slice(-6).map((s,i)=><span key={i} style={{width:12,height:12,borderRadius:3,background:s.present?G+"80":R+"60",display:"inline-block"}}/>)}
+                  </div>
+                </div>
+                <div style={{fontSize:18,fontWeight:800,color:RC(x.rate)}}>{x.rate}%</div>
+              </div>
+            </Card>
+          ))}
+        </div>}
+        {stats.length===0&&<Card style={{textAlign:"center",padding:20}}><div style={{fontSize:28}}>📊</div><div style={{color:"#888",fontSize:12,marginTop:6}}>Chưa có dữ liệu tháng {mo}</div></Card>}
+      </>;
+    })()}
+
+    {/* ---- CLASS VIEW ---- */}
+    {view==="class"&&(()=>{
+      const stats=classStats().filter(x=>!search||(x.cn?.name||"").toLowerCase().includes(search.toLowerCase())||(x.t?.name||"").toLowerCase().includes(search.toLowerCase()));
+      return <>
+        {stats.map((x,i)=>{
+          const {cl,cn,t,sessions,totalPresent,total,rate}=x;
+          return <Card key={cl.id} style={{borderLeft:`3px solid ${rate!==null?RC(rate):"#E2E8F0"}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:13}}>{cn?.name} — {DAYS_FULL[cl.day]} {cl.startTime}</div>
+                <div style={{fontSize:11,color:"#888"}}>GV: {t?.name||"—"} • {cl.classLevel||""}</div>
+                <div style={{fontSize:10,color:"#888"}}>{sessions} buổi • {total} lượt • {totalPresent} có mặt</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                {rate!==null?<><div style={{fontSize:20,fontWeight:800,color:RC(rate)}}>{rate}%</div><div style={{fontSize:9,color:"#888"}}>chuyên cần</div></>:<div style={{fontSize:10,color:"#CBD5E1"}}>Trống</div>}
+              </div>
+            </div>
+          </Card>;
+        })}
+        {stats.length===0&&<Card style={{textAlign:"center",padding:20}}><div style={{color:"#888"}}>Không có dữ liệu</div></Card>}
+      </>;
+    })()}
+
+    {/* ---- TEACHER DISCIPLINE VIEW (admin only) ---- */}
+    {view==="teacher"&&!isTeacher&&(()=>{
+      const stats=teacherStats().filter(x=>!search||x.t.name.toLowerCase().includes(search.toLowerCase()));
+      return <>
+        {stats.length===0&&<Card style={{textAlign:"center",padding:20}}><div style={{color:"#888"}}>Không có dữ liệu tháng {mo}</div></Card>}
+        {stats.map(x=>{
+          const hasIssue=x.lateCount>0||x.overtimeCount>0||x.noPrep>0;
+          return <Card key={x.t.id} style={{borderLeft:`3px solid ${hasIssue?R:G}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:13}}>{x.t.name}</div>
+                <div style={{fontSize:10,color:"#888"}}>{x.sessionCount} buổi dạy tháng {mo}</div>
+              </div>
+              <Badge bg={hasIssue?R+"12":G+"12"} color={hasIssue?R:G}>{hasIssue?"⚠️ Cần chú ý":"✅ Tốt"}</Badge>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginTop:8}}>
+              {[
+                {label:"Đi trễ",value:x.lateCount,color:x.lateCount>0?R:G,icon:"⏰"},
+                {label:"Dạy lố giờ",value:x.overtimeCount,color:x.overtimeCount>1?O:G,icon:"⌛"},
+                {label:"Chưa soạn bài",value:x.noPrep,color:x.noPrep>2?R:x.noPrep>0?O:G,icon:"📝"},
+              ].map((s,i)=><div key={i} style={{textAlign:"center",padding:"6px 4px",background:s.value>0?s.color+"08":"#F8FAFC",borderRadius:8}}>
+                <div style={{fontSize:18,fontWeight:800,color:s.value>0?s.color:"#CBD5E1"}}>{s.value}</div>
+                <div style={{fontSize:9,color:"#888"}}>{s.icon} {s.label}</div>
+              </div>)}
+            </div>
+            {x.lateDetails.length>0&&<div style={{marginTop:6,padding:"4px 6px",background:R+"06",borderRadius:6}}>
+              <div style={{fontSize:10,fontWeight:700,color:R,marginBottom:2}}>⏰ Chi tiết đi trễ:</div>
+              {x.lateDetails.map((d,i)=><div key={i} style={{fontSize:10,color:"#666"}}>{d.date}: trễ {d.lateBy} phút</div>)}
+            </div>}
+            {x.overtimeDetails.length>0&&<div style={{marginTop:4,padding:"4px 6px",background:O+"06",borderRadius:6}}>
+              <div style={{fontSize:10,fontWeight:700,color:O,marginBottom:2}}>⌛ Chi tiết dạy lố:</div>
+              {x.overtimeDetails.map((d,i)=><div key={i} style={{fontSize:10,color:"#666"}}>{d.date}: lố {d.overBy} phút</div>)}
+            </div>}
+          </Card>;
+        })}
+      </>;
+    })()}
+  </div>;
+}
+
 function TPolicyView({data}){
   const bp=data.bonusPolicy;
   return <div style={{padding:14}}>
