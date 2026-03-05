@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Component } from "react";
 import { loadData, saveData, onDataChange } from "./firebase.js";
 import * as XLSX from "xlsx";
 
@@ -8,6 +8,21 @@ const fmtT=d=>{if(!d)return"--:--";const t=new Date(d);return t.getHours().toStr
 const td=()=>new Date().toISOString().split("T")[0];
 const mk=d=>d?d.substring(0,7):new Date().toISOString().substring(0,7);
 const uid=()=>"id_"+Date.now()+"_"+Math.random().toString(36).substr(2,5);
+
+class ErrorBoundary extends Component{
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(error){return{hasError:true,error};}
+  render(){
+    if(this.state.hasError)return <div style={{padding:20,textAlign:"center",background:"#FEF2F2",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <div style={{fontSize:36,marginBottom:10}}>⚠️</div>
+      <div style={{fontSize:18,fontWeight:800,color:"#EF4444",marginBottom:8}}>WOW ART Portal — Lỗi</div>
+      <div style={{fontSize:13,color:"#666",marginBottom:12,maxWidth:400}}>{this.state.error?.message||"Đã xảy ra lỗi"}</div>
+      <button onClick={()=>{this.setState({hasError:false,error:null});}} style={{padding:"10px 24px",borderRadius:10,border:"none",background:"#1D60A4",color:"#FFF",fontWeight:700,cursor:"pointer",fontSize:14}}>🔄 Thử lại</button>
+      <div style={{fontSize:10,color:"#888",marginTop:16,maxWidth:500,wordBreak:"break-all"}}>{this.state.error?.stack?.substring(0,300)}</div>
+    </div>;
+    return this.props.children;
+  }
+}
 const DAYS=["CN","T2","T3","T4","T5","T6","T7"];
 const DAYS_FULL=["Chủ nhật","Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7"];
 const SK="wowart_v8";
@@ -154,7 +169,8 @@ const isOnTime=(checkInISO,classStartTime)=>{
   return ciMin<=csMin;// check-in trước hoặc đúng giờ bắt đầu ca = đúng giờ
 };
 
-export default function App(){
+export default function App(){return <ErrorBoundary><AppInner/></ErrorBoundary>;}
+function AppInner(){
   const[data,setData]=useState(null);
   const[loading,setLoading]=useState(true);
   const[role,setRole]=useState(null);// "ceo","admin_center","academic","accountant","teacher"
@@ -187,6 +203,7 @@ export default function App(){
   const save=async nd=>{setData(nd);try{await saveData(nd);}catch(e){console.error("Firebase save error:",e);}};
 
   if(loading)return <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",background:BG}}><div style={{textAlign:"center"}}><div style={{fontSize:36,fontWeight:900,color:B}}>WOW ART</div><div style={{color:"#888",marginTop:8}}>Đang tải...</div></div></div>;
+  if(!data)return <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:"100vh",background:BG}}><div style={{textAlign:"center"}}><div style={{fontSize:36,fontWeight:900,color:B}}>WOW ART</div><div style={{color:R,marginTop:8}}>Không thể tải data. Refresh lại trang.</div></div></div>;
   if(!role)return <RoleSelect onSelect={(r,u)=>{setRole(r);setUser(u);setTab(r==="teacher"?"attendance":"dashboard");}}/>;
   if(role&&!user)return <StaffLogin data={data} roleType={role} onLogin={u=>{setUser(u);setTab(role==="teacher"?"attendance":"dashboard");}} onBack={()=>setRole(null)}/>;
 
