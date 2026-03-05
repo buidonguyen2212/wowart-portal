@@ -587,13 +587,25 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
           <span style={{color:O,fontWeight:600}}>{s.expiryDate}</span>
         </div>)}
       </div>}
-      {expiring30.length>0&&<div>
+      {expiring30.length>0&&<div style={{marginBottom:10}}>
         <div style={{fontSize:11,fontWeight:700,color:B,marginBottom:4}}>🔵 HẾT HẠN TRONG 30 NGÀY ({expiring30.length})</div>
         {expiring30.slice(0,10).map(s=><div key={s.id} style={{fontSize:11,padding:"4px 0",borderBottom:"1px solid #E2E8F0",display:"flex",justifyContent:"space-between"}}>
           <span>{s.name} — GV: {s.classInfo?.[0]?.teacherName||"?"} <span style={{color:"#888"}}>({data.centers.find(c=>c.id===s.centerId)?.name})</span></span>
           <span style={{color:B,fontWeight:600}}>{s.expiryDate}</span>
         </div>)}
       </div>}
+      {(()=>{
+        const qEnd=new Date(now.getFullYear(),Math.ceil((now.getMonth()+1)/3)*3,0);
+        const expiringQ=activeHV.filter(s=>{const d=new Date(s.expiryDate);return d>in30&&d<=qEnd;}).map(enrichHV);
+        if(expiringQ.length===0)return null;
+        return <div>
+          <div style={{fontSize:11,fontWeight:700,color:"#7C3AED",marginBottom:4}}>🟣 HẾT HẠN TRONG QUÝ ({expiringQ.length})</div>
+          {expiringQ.slice(0,15).map(s=><div key={s.id} style={{fontSize:11,padding:"4px 0",borderBottom:"1px solid #E8E0F0",display:"flex",justifyContent:"space-between"}}>
+            <span>{s.name} — GV: {s.classInfo?.[0]?.teacherName||"?"} <span style={{color:"#888"}}>({data.centers.find(c=>c.id===s.centerId)?.name})</span></span>
+            <span style={{color:"#7C3AED",fontWeight:600}}>{s.expiryDate}</span>
+          </div>)}
+        </div>;
+      })()}
       {expired.length===0&&expiring7.length===0&&expiring30.length===0&&<div style={{color:"#888",textAlign:"center",fontSize:12}}>Không có HV nào sắp hết hạn</div>}
     </Card>}
 
@@ -946,17 +958,15 @@ function AClasses({data,save,canEdit=true,fullData,scopeCenterIds}){
   const curCenter=data.centers.find(c=>c.id===cid);
   const curType=curCenter?.type||"b2c";
 
-  const[form,setForm]=useState({teacherId:data.teachers[0]?.id||"",day:6,caNumber:1,startTime:"09:00",endTime:"10:30",classLevel:"Level 1",studentIds:[]});
+  const[form,setForm]=useState({teacherId:data.teachers[0]?.id||"",day:6,caNumber:1,startTime:"09:00",endTime:"10:30",classLevel:"Level 1"});
   const f=(k,v)=>setForm(p=>({...p,[k]:v}));
   const classes=data.classes.filter(c=>c.centerId===cid);
-  const cStudents=data.students.filter(s=>s.centerId===cid&&s.status!=="Trial");
 
   const doSave=()=>{
-    if(!form.teacherId)return;
-    save({...data,classes:[...data.classes,{...form,id:uid(),centerId:cid}]});
-    setShow(false);setForm(p=>({...p,studentIds:[]}));
+    if(!form.teacherId)return alert("Chọn giáo viên");
+    save({...data,classes:[...data.classes,{...form,id:uid(),centerId:cid,studentIds:[]}]});
+    setShow(false);
   };
-  const toggleSt=sid=>setForm(p=>({...p,studentIds:p.studentIds.includes(sid)?p.studentIds.filter(x=>x!==sid):[...p.studentIds,sid]}));
   const rmClass=id=>save({...data,classes:data.classes.filter(c=>c.id!==id)});
 
   const addLocation=()=>{
@@ -1051,49 +1061,100 @@ function AClasses({data,save,canEdit=true,fullData,scopeCenterIds}){
             <Sel label="Kết thúc" value={form.endTime} onChange={v=>f("endTime",v)} options={TIME_OPTIONS.map(t=>({value:t,label:t}))}/>
           </div>
           <Sel label="Level lớp" value={form.classLevel} onChange={v=>f("classLevel",v)} options={LEVELS.map(l=>({value:l,label:l}))}/>
-          <div style={{fontSize:11,fontWeight:600,color:"#666",marginBottom:4}}>Học viên ({form.studentIds.length}) <span style={{fontWeight:400,color:"#aaa"}}>— có thể thêm sau</span></div>
-          <div style={{maxHeight:180,overflowY:"auto",border:"1px solid #E2E8F0",borderRadius:8,padding:6,marginBottom:8}}>
-            {cStudents.length===0?<div style={{color:"#888",fontSize:12,padding:6}}>Chưa có HV tại {curCenter?.name}</div>:
-            cStudents.map(s=>(
-              <label key={s.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 2px",cursor:"pointer",fontSize:12}}>
-                <input type="checkbox" checked={form.studentIds.includes(s.id)} onChange={()=>toggleSt(s.id)} style={{accentColor:B,width:15,height:15}}/>
-                {s.name} <span style={{color:"#888",fontSize:10}}>{s.gender}•{s.studentLevel||""}</span>
-              </label>
-            ))}
-          </div>
-          <Btn full onClick={doSave} bg={G}>Tạo lớp</Btn>
+          <Btn full onClick={doSave} bg={G}>Tạo lớp (thêm HV sau)</Btn>
         </Card>}
 
-        {classes.map(cl=>{
-          const teacher=data.teachers.find(t=>t.id===cl.teacherId);
-          const sts=(cl.studentIds||[]).map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
-          const activeCount=sts.filter(s=>s.status==="Đang học").length;
-          return <Card key={cl.id} style={{padding:"10px 12px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <div>
-                <span style={{fontWeight:700,fontSize:13}}>{DAYS_FULL[cl.day]} — Ca {cl.caNumber} ({cl.startTime}-{cl.endTime})</span>
-                <div style={{fontSize:11,color:"#888",marginTop:1}}>GV: {teacher?.name} • {cl.classLevel} • Sĩ số: <strong>{activeCount}</strong>/{sts.length}</div>
-              </div>
-              <div style={{display:"flex",gap:3}}>
-                <select title="Chuyển GV" value={cl.teacherId} onChange={e=>{if(confirm(`Chuyển lớp ${DAYS_FULL[cl.day]} Ca${cl.caNumber} cho ${data.teachers.find(x=>x.id===e.target.value)?.name}?\n\n(Lương các buổi sau sẽ tính cho GV mới)`)){save({...data,classes:data.classes.map(c=>c.id===cl.id?{...c,teacherId:e.target.value}:c)});}}} style={{padding:"3px 4px",borderRadius:6,border:"1.5px solid #E2E8F0",fontSize:10,background:W,cursor:"pointer",maxWidth:100}}>
-                  {data.teachers.filter(x=>(x.status||"active")==="active").map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
-                </select>
-                <button onClick={()=>rmClass(cl.id)} style={{background:R+"10",border:"none",borderRadius:7,padding:"3px 8px",color:R,cursor:"pointer",fontSize:10}}>🗑</button>
-              </div>
-            </div>
-            {sts.map((s,i)=>(
-              <div key={s.id} style={{fontSize:11,padding:"3px 0",borderTop:i?"1px solid #F5F5F5":"none",display:"flex",justifyContent:"space-between"}}>
-                <span>{s.name} <span style={{color:"#999"}}>({s.gender}•{s.studentLevel||""})</span></span>
-                <span style={{color:s.status==="Đang học"?G:s.status==="Bảo lưu"?O:s.status==="Trial"?B:R,fontWeight:600,fontSize:10}}>{s.status}</span>
-              </div>
-            ))}
-          </Card>;
-        })}
+        {classes.map(cl=><ClassCard key={cl.id} cl={cl} data={data} save={save} canEdit={canEdit} cid={cid}/>)}
       </Sec>
 
-      <AStudents data={data} save={save} centerId={cid}/>
+      {canEdit&&<AStudents data={data} save={save} centerId={cid}/>}
     </>}
   </div>;
+}
+
+function ClassCard({cl,data,save,canEdit,cid}){
+  const[open,setOpen]=useState(false);
+  const[showAdd,setShowAdd]=useState(false);
+  const[selSt,setSelSt]=useState(null);// viewing student detail
+  const teacher=data.teachers.find(t=>t.id===cl.teacherId);
+  const sts=(cl.studentIds||[]).map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
+  const activeCount=sts.filter(s=>s.status==="Đang học").length;
+  const cStudents=data.students.filter(s=>s.centerId===cid&&!(cl.studentIds||[]).includes(s.id));
+  const now=new Date();const in30=new Date(now.getTime()+30*86400000);
+  const accent=data.centers.find(c=>c.id===cid)?.type==="b2b"?"#7C3AED":B;
+
+  const addSt=sid=>{save({...data,classes:data.classes.map(c=>c.id===cl.id?{...c,studentIds:[...(c.studentIds||[]),sid]}:c)});};
+  const rmSt=sid=>{if(confirm("Xóa HV khỏi lớp này?"))save({...data,classes:data.classes.map(c=>c.id===cl.id?{...c,studentIds:(c.studentIds||[]).filter(x=>x!==sid)}:c)});};
+  const rmClass=()=>{if(confirm("Xóa lớp này?"))save({...data,classes:data.classes.filter(c=>c.id!==cl.id)});};
+
+  return <Card style={{borderLeft:`4px solid ${accent}`,overflow:"hidden",marginBottom:8}}>
+    {/* Class header — clickable */}
+    <button onClick={()=>{setOpen(!open);setSelSt(null);}} style={{width:"100%",padding:"10px 12px",background:open?accent+"08":"transparent",border:"none",cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div>
+        <span style={{fontWeight:700,fontSize:13,color:D}}>{DAYS_FULL[cl.day]} — Ca {cl.caNumber} ({cl.startTime}-{cl.endTime})</span>
+        <div style={{fontSize:11,color:"#888",marginTop:1}}>GV: <strong>{teacher?.name||"?"}</strong> • {cl.classLevel} • <span style={{color:accent,fontWeight:700}}>{activeCount} HV</span></div>
+      </div>
+      <span style={{fontSize:14,color:"#888"}}>{open?"▲":"▼"}</span>
+    </button>
+
+    {/* Expanded content */}
+    {open&&<div style={{padding:"8px 12px"}}>
+      {/* Quick actions */}
+      {canEdit&&<div style={{display:"flex",gap:4,marginBottom:8}}>
+        <select title="Chuyển GV" value={cl.teacherId} onChange={e=>{if(confirm(`Chuyển lớp cho ${data.teachers.find(x=>x.id===e.target.value)?.name}?`)){save({...data,classes:data.classes.map(c=>c.id===cl.id?{...c,teacherId:e.target.value}:c)});}}} style={{flex:1,padding:"5px 6px",borderRadius:6,border:"1.5px solid #E2E8F0",fontSize:10,background:W}}>
+          {data.teachers.filter(x=>(x.status||"active")==="active").map(x=><option key={x.id} value={x.id}>{x.name}</option>)}
+        </select>
+        <button onClick={()=>setShowAdd(!showAdd)} style={{padding:"5px 10px",borderRadius:6,border:`1.5px solid ${G}`,background:showAdd?G:W,color:showAdd?W:G,fontSize:10,fontWeight:700,cursor:"pointer"}}>{showAdd?"Đóng":"+ Thêm HV"}</button>
+        <button onClick={rmClass} style={{padding:"5px 8px",borderRadius:6,border:"none",background:R+"10",color:R,cursor:"pointer",fontSize:10}}>🗑</button>
+      </div>}
+
+      {/* Add student picker */}
+      {showAdd&&canEdit&&<div style={{background:"#F0FDF4",borderRadius:8,padding:8,marginBottom:8,maxHeight:150,overflowY:"auto"}}>
+        <div style={{fontSize:10,fontWeight:700,color:G,marginBottom:4}}>Chọn HV để thêm vào lớp:</div>
+        {cStudents.length===0?<div style={{fontSize:11,color:"#888"}}>Không có HV khả dụng. Tạo HV mới ở mục bên dưới.</div>:
+        cStudents.map(s=>(
+          <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:"1px solid #E6FFED"}}>
+            <span style={{fontSize:11}}>{s.name} <span style={{color:"#888",fontSize:9}}>({s.status})</span></span>
+            <button onClick={()=>addSt(s.id)} style={{padding:"2px 8px",borderRadius:5,border:"none",background:G,color:W,fontSize:10,fontWeight:600,cursor:"pointer"}}>+ Thêm</button>
+          </div>
+        ))}
+      </div>}
+
+      {/* Student detail popup */}
+      {selSt&&(()=>{
+        const s=data.students.find(x=>x.id===selSt);if(!s)return null;
+        const isExpiring=s.expiryDate&&new Date(s.expiryDate)<=in30;
+        return <Card style={{border:`2px solid ${accent}`,marginBottom:8,background:"#FAFBFF"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <span style={{fontWeight:800,fontSize:14,color:accent}}>{s.name}</span>
+            <button onClick={()=>setSelSt(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:14}}>✕</button>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
+            {[{l:"Giới tính",v:s.gender},{l:"Năm sinh",v:s.dob||"—"},{l:"Level",v:s.studentLevel||"—"},{l:"Trạng thái",v:s.status},{l:"Ngày ĐK",v:s.enrollDate||"—"},{l:"Hết hạn",v:s.expiryDate||"—"},{l:"Phụ huynh",v:s.parentName||"—"},{l:"SĐT PH",v:s.parentPhone||"—"}].map((r,i)=>(
+              <div key={i} style={{padding:"3px 0"}}><span style={{color:"#888"}}>{r.l}: </span><strong style={{color:r.l==="Hết hạn"&&isExpiring?R:D}}>{r.v}</strong></div>
+            ))}
+          </div>
+          {isExpiring&&<div style={{background:R+"10",borderRadius:6,padding:6,marginTop:4,fontSize:11,color:R,fontWeight:600}}>⚠️ Sắp hết khóa — cần liên hệ PH!</div>}
+        </Card>;
+      })()}
+
+      {/* Student list */}
+      {sts.length===0?<div style={{textAlign:"center",color:"#888",fontSize:12,padding:10}}>Lớp trống — bấm "+ Thêm HV" để thêm</div>:
+      sts.map((s,i)=>{
+        const isExpiring=s.expiryDate&&new Date(s.expiryDate)<=in30;
+        return <div key={s.id} style={{fontSize:11,padding:"5px 0",borderTop:i?"1px solid #F0F0F0":"none",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <button onClick={()=>setSelSt(selSt===s.id?null:s.id)} style={{background:"none",border:"none",cursor:"pointer",padding:0,textAlign:"left",flex:1}}>
+            <span style={{fontWeight:600}}>{s.name}</span> <span style={{color:"#999",fontSize:9}}>({s.gender}•{s.studentLevel||""})</span>
+            {isExpiring&&<span style={{color:R,fontSize:9,marginLeft:4}}>⚠️ hết {s.expiryDate}</span>}
+          </button>
+          <div style={{display:"flex",alignItems:"center",gap:4}}>
+            <span style={{color:s.status==="Đang học"?G:s.status==="Bảo lưu"?O:s.status==="Trial"?B:R,fontWeight:600,fontSize:9}}>{s.status}</span>
+            {canEdit&&<button onClick={()=>rmSt(s.id)} style={{background:R+"08",border:"none",borderRadius:4,padding:"1px 5px",color:R,cursor:"pointer",fontSize:9}}>✕</button>}
+          </div>
+        </div>;
+      })}
+    </div>}
+  </Card>;
 }
 
 function AStudents({data,save,centerId}){
@@ -1259,8 +1320,8 @@ function ARenewals({data,save,canEdit=true,scopeCenterIds}){
     }).sort((a,b)=>b.totalRenewed-a.totalRenewed);
   };
 
-  // Package amounts
-  const pkgAmounts={4:1600000,6:2200000,12:4000000};
+  // Flat renewal bonus
+  const RENEWAL_BONUS=data.bonusPolicy?.renewalBonus||200000;
 
   return <div style={{padding:14}}>
     {/* View toggle */}
@@ -1274,24 +1335,17 @@ function ARenewals({data,save,canEdit=true,scopeCenterIds}){
     {view==="add"&&<>
       <input type="month" value={mo} onChange={e=>setMo(e.target.value)} style={{width:"100%",padding:"7px 12px",borderRadius:9,border:"1.5px solid #E2E8F0",fontSize:13,fontWeight:600,marginBottom:12,boxSizing:"border-box"}}/>
       <Card style={{border:`2px solid ${G}`}}>
-        <div style={{fontSize:13,fontWeight:700,color:G,marginBottom:8}}>🔄 Ghi nhận Tái đăng ký</div>
+        <div style={{fontSize:13,fontWeight:700,color:G,marginBottom:4}}>🔄 Ghi nhận Tái đăng ký</div>
+        <div style={{fontSize:11,color:"#888",marginBottom:8}}>Thưởng GV: <strong style={{color:G}}>{fmt(RENEWAL_BONUS)}/bé</strong> (cố định)</div>
         <Sel label="GV phụ trách" value={form.teacherId} onChange={v=>setForm(p=>({...p,teacherId:v}))} options={scopedTeachers.map(t=>({value:t.id,label:t.name}))}/>
         <Sel label="Học viên" value={form.studentId} onChange={v=>setForm(p=>({...p,studentId:v}))} options={[{value:"",label:"-- Chọn HV --"},...eligibleStudents.map(s=>{
           const cn=data.centers.find(c=>c.id===s.centerId);
           const prevR=allRenewals.filter(r=>r.studentId===s.id).length;
           return {value:s.id,label:`${s.name} (${cn?.name||"?"}) ${prevR>0?`— TĐK lần ${prevR}`:""}`};
         })]}/>
-        {form.studentId&&allRenewals.filter(r=>r.studentId===form.studentId).length>0&&<div style={{background:G+"08",borderRadius:8,padding:8,marginBottom:8}}>
-          <div style={{fontSize:11,fontWeight:700,color:G}}>💎 Lịch sử TĐK của HV này:</div>
-          {allRenewals.filter(r=>r.studentId===form.studentId).map((r,i)=>{
-            const t=data.teachers.find(x=>x.id===r.teacherId);
-            return <div key={r.id} style={{fontSize:10,color:"#666",marginTop:2}}>Lần {i+1}: Gói {r.packageMonths}T — {r.date} — GV: {t?.name}{r.amount?` — ${fmt(r.amount)}`:""}</div>;
-          })}
-        </div>}
-        <Sel label="Gói" value={form.packageMonths} onChange={v=>{const pm=+v;setForm(p=>({...p,packageMonths:pm,amount:pkgAmounts[pm]||0}));}} options={[{value:4,label:"4 tháng"},{value:6,label:"6 tháng"},{value:12,label:"12 tháng"}]}/>
-        <Inp label="Học phí (VNĐ)" type="number" value={form.amount} onChange={e=>setForm(p=>({...p,amount:+e.target.value}))}/>
-        <Inp label="Ghi chú" value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))} placeholder="VD: PH rất hài lòng, bé tiến bộ rõ"/>
-        <Btn full onClick={addR} bg={G}>+ Ghi nhận TĐK</Btn>
+        <Inp label="Học phí (VNĐ)" type="number" value={form.amount} onChange={e=>setForm(p=>({...p,amount:+e.target.value}))} placeholder="VD: 1600000"/>
+        <Inp label="Ghi chú" value={form.note} onChange={e=>setForm(p=>({...p,note:e.target.value}))} placeholder="VD: PH rất hài lòng"/>
+        <Btn full onClick={addR} bg={G}>+ Ghi nhận TĐK — Thưởng {fmt(RENEWAL_BONUS)}</Btn>
       </Card>
       <Sec title={`Tái đăng ký tháng ${mo} (${moRenewals.length})`}>
         {moRenewals.map(r=>{
@@ -2157,7 +2211,12 @@ ${expiring.length>0?expiring.map(s=>`- ${s.name} (${data.centers.find(c=>c.id===
         body:JSON.stringify({prompt,context:ctx})
       });
       const d=await res.json();
-      if(d.error){setResponse("⚠️ "+d.error);setLoading(false);return;}
+      if(d.error){
+        const errMsg=d.error.includes("quota")||d.error.includes("Quota")
+          ?"⚠️ Gemini AI đã hết lượt miễn phí hôm nay.\n\n💡 Giải pháp:\n• Đợi 24h để reset quota\n• Hoặc nâng cấp Gemini API lên gói trả phí tại Google AI Studio\n• Hoặc thêm Anthropic Claude API key vào Vercel"
+          :"⚠️ "+d.error;
+        setResponse(errMsg);setLoading(false);return;
+      }
       const text=d.text||"Không nhận được phản hồi.";
       setResponse(text+(d.provider?`\n\n_— ${d.provider==="claude"?"Claude":"Gemini"}_`:""));
       setHistory(prev=>[{q:prompt,a:text,ts:new Date().toLocaleTimeString("vi-VN")},...prev].slice(0,10));
