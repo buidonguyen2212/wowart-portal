@@ -101,12 +101,12 @@ const calcObs=(scores,liets)=>{
 
 const initData=()=>({
   users:[
-    {id:"u_ceo",name:"CEO / Group Manager",role:"ceo",password:"wowart@789"},
-    {id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wowart@789"},
-    {id:"u_am",name:"Academic Manager",role:"academic",password:"wowart@789",centerIds:[]},
-    {id:"u_adm_q7",name:"Admin Q7",role:"admin_center",password:"wowart@789",centerIds:["c1"]},
-    {id:"u_adm_tp",name:"Admin Tân Phú",role:"admin_center",password:"wowart@789",centerIds:["c2"]},
-    {id:"u_kt",name:"Kế toán",role:"accountant",password:"wowart@789"},
+    {id:"u_ceo",name:"CEO / Group Manager",role:"ceo",password:"wa@123"},
+    {id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wa@123"},
+    {id:"u_am",name:"Academic Manager",role:"academic",password:"wa@123",centerIds:[]},
+    {id:"u_adm_q7",name:"Admin Q7",role:"admin_center",password:"wa@123",centerIds:["c1"]},
+    {id:"u_adm_tp",name:"Admin Tân Phú",role:"admin_center",password:"wa@123",centerIds:["c2"]},
+    {id:"u_kt",name:"Kế toán",role:"accountant",password:"wa@123"},
   ],
   centers:[
     {id:"c1",name:"Q7",type:"b2c"},
@@ -186,7 +186,7 @@ function AppInner(){
       parsed.teachers=(parsed.teachers||[]).map(t=>({...t,employType:t.employType||"part",status:t.status||"active",fixedSalary:t.fixedSalary||0,baselineSessions:t.baselineSessions||32,otRateB2C:t.otRateB2C||t.salaryB2C,otRateB2B:t.otRateB2B||t.salaryB2B,bankName:t.bankName||"",bankAccount:t.bankAccount||"",bankHolder:t.bankHolder||""}));
       parsed.users=parsed.users||initData().users;
       if(!parsed.users.find(u=>u.role==="admin_all")){
-        parsed.users.push({id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wowart@789"});
+        parsed.users.push({id:"u_admin",name:"Admin Tổng",role:"admin_all",password:"wa@123"});
       }
       parsed.students=parsed.students||[];
       parsed.classes=parsed.classes||[];
@@ -210,10 +210,17 @@ function AppInner(){
 
   const logout=()=>{setRole(null);setUser(null);setTab("");};
   const changeStaffPw=()=>{
-    if(!R_TCH){// staff user
+    if(R_TCH){// teacher
+      const t=data.teachers.find(x=>x.id===user.id);
+      if(!t||cpOld!==(t.password||t.phone)){setCpMsg("❌ Mật khẩu cũ không đúng");return;}
+      if(cpNew.length<3){setCpMsg("❌ Tối thiểu 3 ký tự");return;}
+      if(cpNew!==cpCfm){setCpMsg("❌ Xác nhận không khớp");return;}
+      save({...data,teachers:data.teachers.map(x=>x.id===user.id?{...x,password:cpNew}:x)});
+      setCpMsg("✅ Đã đổi thành công!");setCpOld("");setCpNew("");setCpCfm("");setTimeout(()=>setShowChgPw(false),1500);
+    }else{// staff user
       const u=(data.users||[]).find(x=>x.id===user.id);
       if(!u||cpOld!==u.password){setCpMsg("❌ Mật khẩu cũ không đúng");return;}
-      if(cpNew.length<4){setCpMsg("❌ Tối thiểu 4 ký tự");return;}
+      if(cpNew.length<3){setCpMsg("❌ Tối thiểu 3 ký tự");return;}
       if(cpNew!==cpCfm){setCpMsg("❌ Xác nhận không khớp");return;}
       save({...data,users:data.users.map(x=>x.id===user.id?{...x,password:cpNew}:x)});
       setCpMsg("✅ Đã đổi thành công!");setCpOld("");setCpNew("");setCpCfm("");setTimeout(()=>setShowChgPw(false),1500);
@@ -244,12 +251,12 @@ function AppInner(){
         <div><span style={{fontWeight:800,fontSize:17}}>WOW ART</span><span style={{fontSize:10,opacity:.8,marginLeft:6}}>Portal</span></div>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <Badge bg="rgba(255,255,255,.2)" color={W}>{roleLabel}</Badge>
-          {!R_TCH&&<button onClick={()=>setShowChgPw(!showChgPw)} style={{background:"rgba(255,255,255,.2)",border:"none",color:W,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:11}}>🔐</button>}
+          <button onClick={()=>setShowChgPw(!showChgPw)} style={{background:"rgba(255,255,255,.2)",border:"none",color:W,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:11}}>🔐</button>
           <button onClick={logout} style={{background:"rgba(255,255,255,.2)",border:"none",color:W,borderRadius:6,padding:"3px 8px",cursor:"pointer",fontSize:11}}>Thoát</button>
         </div>
       </div>
-      {/* Staff password change popup */}
-      {showChgPw&&!R_TCH&&<div style={{padding:14,background:"#FEF3C7",borderBottom:"2px solid #F4C42D"}}>
+      {/* Password change popup — all roles */}
+      {showChgPw&&<div style={{padding:14,background:"#FEF3C7",borderBottom:"2px solid #F4C42D"}}>
         <div style={{fontSize:13,fontWeight:700,color:"#92400E",marginBottom:8}}>🔐 Đổi mật khẩu — {user.name}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
           <Inp label="Mật khẩu cũ" type="password" value={cpOld} onChange={e=>setCpOld(e.target.value)} placeholder="Hiện tại"/>
@@ -438,7 +445,7 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
   // Enrich each HV with class + teacher info
   const enrichHV=s=>{
     const cn=data.centers.find(c=>c.id===s.centerId);
-    const cls=data.classes.filter(c=>c.studentIds.includes(s.id));
+    const cls=data.classes.filter(c=>(c.studentIds||[]).includes(s.id));
     const classInfo=cls.map(cl=>{
       const t=data.teachers.find(x=>x.id===cl.teacherId);
       return {className:`${DAYS_FULL[cl.day]} Ca${cl.caNumber} (${cl.startTime}-${cl.endTime})`,teacherName:t?.name||"?",classLevel:cl.classLevel};
@@ -472,7 +479,7 @@ function ADash({data,save,canEdit=true,scopeCenterIds}){
     const onTimeRate=totCI?Math.round(onTime/totCI*100):0;
     const prepCount=allSS.filter(s=>s.lessonPrepped).length;
     const prepRate=allSS.length?Math.round(prepCount/allSS.length*100):0;
-    const tStudentIds=[...new Set(tClasses.flatMap(cl=>cl.studentIds))];
+    const tStudentIds=[...new Set(tClasses.flatMap(cl=>(cl.studentIds||[])))];
     const qEnd=new Date(now.getFullYear(),Math.ceil((now.getMonth()+1)/3)*3,0);
     const expiring=tStudentIds.filter(sid=>{const st=data.students.find(s=>s.id===sid);return st?.expiryDate&&new Date(st.expiryDate)<=qEnd;}).length;
     const estRevenue=c.totalHV*1500000;
@@ -1044,7 +1051,7 @@ function AClasses({data,save,canEdit=true,fullData,scopeCenterIds}){
             <Sel label="Kết thúc" value={form.endTime} onChange={v=>f("endTime",v)} options={TIME_OPTIONS.map(t=>({value:t,label:t}))}/>
           </div>
           <Sel label="Level lớp" value={form.classLevel} onChange={v=>f("classLevel",v)} options={LEVELS.map(l=>({value:l,label:l}))}/>
-          <div style={{fontSize:11,fontWeight:600,color:"#666",marginBottom:4}}>Học viên đang học ({form.studentIds.length})</div>
+          <div style={{fontSize:11,fontWeight:600,color:"#666",marginBottom:4}}>Học viên ({form.studentIds.length}) <span style={{fontWeight:400,color:"#aaa"}}>— có thể thêm sau</span></div>
           <div style={{maxHeight:180,overflowY:"auto",border:"1px solid #E2E8F0",borderRadius:8,padding:6,marginBottom:8}}>
             {cStudents.length===0?<div style={{color:"#888",fontSize:12,padding:6}}>Chưa có HV tại {curCenter?.name}</div>:
             cStudents.map(s=>(
@@ -1059,7 +1066,7 @@ function AClasses({data,save,canEdit=true,fullData,scopeCenterIds}){
 
         {classes.map(cl=>{
           const teacher=data.teachers.find(t=>t.id===cl.teacherId);
-          const sts=cl.studentIds.map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
+          const sts=(cl.studentIds||[]).map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
           const activeCount=sts.filter(s=>s.status==="Đang học").length;
           return <Card key={cl.id} style={{padding:"10px 12px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
@@ -1101,13 +1108,13 @@ function AStudents({data,save,centerId}){
     save({...data,students:[...data.students,{...form,status,id:uid(),centerId}]});
     setForm({...empty,centerId});
   };
-  const rm=id=>save({...data,students:data.students.filter(s=>s.id!==id),classes:data.classes.map(c=>({...c,studentIds:c.studentIds.filter(x=>x!==id)}))});
+  const rm=id=>save({...data,students:data.students.filter(s=>s.id!==id),classes:data.classes.map(c=>({...c,studentIds:(c.studentIds||[]).filter(x=>x!==id)}))});
   const upSt=(id,st)=>{
     const old=data.students.find(s=>s.id===id);
     let newSessions=data.sessions;
     // FIX #2: If Trial → Đang học, only mark LAST session (most recent) with converted=true
     if(old&&old.status==="Trial"&&st==="Đang học"){
-      const cls=data.classes.find(c=>c.studentIds.includes(id));
+      const cls=data.classes.find(c=>(c.studentIds||[]).includes(id));
       if(cls){
         // Find the LAST session for this class that has this student
         const relevantSessions=data.sessions
@@ -1202,7 +1209,7 @@ function ARenewals({data,save,canEdit=true,scopeCenterIds}){
     return Object.entries(map).map(([sid,info])=>{
       const s=data.students.find(x=>x.id===sid);
       const cn=data.centers.find(c=>c.id===s?.centerId);
-      const cls=data.classes.filter(c=>c.studentIds.includes(sid));
+      const cls=data.classes.filter(c=>(c.studentIds||[]).includes(sid));
       const gvNames=[...new Set(cls.map(c=>{const t=data.teachers.find(x=>x.id===c.teacherId);return t?.name||"?";}))]
       const enrollDate=s?.enrollDate||"";
       const lastR=info.renewals.sort((a,b)=>b.date.localeCompare(a.date))[0];
@@ -1215,7 +1222,7 @@ function ARenewals({data,save,canEdit=true,scopeCenterIds}){
   const teacherRetention=()=>{
     return scopedTeachers.map(t=>{
       const tClasses=data.classes.filter(c=>c.teacherId===t.id);
-      const tStudentIds=[...new Set(tClasses.flatMap(c=>c.studentIds))];
+      const tStudentIds=[...new Set(tClasses.flatMap(c=>(c.studentIds||[])))];
       const tStudents=tStudentIds.map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
       const tActive=tStudents.filter(s=>s.status==="Đang học").length;
       const tTotal=tStudents.length;
@@ -2275,7 +2282,7 @@ function calcSalary(t,sessions,data,mo){
   const fixedPay=isFull?(t.fixedSalary||0):0;
   const total=Math.max(0,fixedPay+sessionPay+totalBonus-penalty);
   const tClasses=data.classes.filter(c=>c.teacherId===t.id);
-  const tStudentIds=[...new Set(tClasses.flatMap(c=>c.studentIds))];
+  const tStudentIds=[...new Set(tClasses.flatMap(c=>(c.studentIds||[])))];
   const totalHV=tStudentIds.length;
   const costPerHV=totalHV>0?Math.round(total/totalHV):0;
   const costPerSession=sessionCount>0?Math.round(total/sessionCount):0;
@@ -2502,7 +2509,7 @@ function TAtt({data,save,user}){
   const agenda=classesForDay.map(cl=>{
     const loc=data.centers.find(c=>c.id===cl.centerId);
     const session=sessionsForDate.find(s=>s.classId===cl.id);
-    const activeStudentIds=cl.studentIds.filter(sid=>{
+    const activeStudentIds=(cl.studentIds||[]).filter(sid=>{
       const st=data.students.find(s=>s.id===sid);
       return st&&(st.status==="Đang học"||st.status==="Trial");
     });
@@ -2531,10 +2538,10 @@ function TAtt({data,save,user}){
 
   const doCheckIn=(cl,locType)=>{
     const cid=cl.centerId;
-    if(!lessonPrepped[cl.id])return alert("Vui lòng xác nhận đã soạn bài trước khi check-in!");
+    const prepped=lessonPrepped[cl.id]||false;
     const existing=sessionsForDate.find(s=>s.classId===cl.id);
     if(existing)return alert("Ca này đã check-in rồi!");
-    const activeStudentIds=cl.studentIds.filter(sid=>{
+    const activeStudentIds=(cl.studentIds||[]).filter(sid=>{
       const st=data.students.find(s=>s.id===sid);
       return st&&(st.status==="Đang học"||st.status==="Trial");
     });
@@ -2542,7 +2549,7 @@ function TAtt({data,save,user}){
       const st=data.students.find(s=>s.id===sid);
       return {studentId:sid,name:st?.name||"?",present:true,isTrial:st?.status==="Trial",isMakeup:false,converted:false};
     });
-    const session={id:uid(),teacherId:user.id,classId:cl.id,centerId:cid,date:selDate,type:locType,checkIn:new Date().toISOString(),checkOut:null,classStartTime:cl.startTime,attendance,reportSent:false,reportNote:"",lessonPrepped:true};
+    const session={id:uid(),teacherId:user.id,classId:cl.id,centerId:cid,date:selDate,type:locType,checkIn:new Date().toISOString(),checkOut:null,classStartTime:cl.startTime,attendance,reportSent:false,reportNote:"",lessonPrepped:prepped};
     save({...data,sessions:[...data.sessions,session]});
     setLessonPrepped(p=>({...p,[cl.id]:false}));
   };
@@ -2656,10 +2663,11 @@ function TAtt({data,save,user}){
               return <div key={sid} style={{fontSize:11,padding:"2px 0",color:"#555"}}>• {s.name} <span style={{fontSize:9,color:s.status==="Trial"?O:G}}>{s.status==="Trial"?"🌟 Trial":""}</span></div>;
             })}
             <div style={{background:"#FFFBEB",border:"1.5px solid #F4C42D",borderRadius:8,padding:10,marginTop:8}}>
-              <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
-                <input type="checkbox" checked={lessonPrepped[cl.id]||false} onChange={e=>setLessonPrepped(p=>({...p,[cl.id]:e.target.checked}))} style={{width:18,height:18,accentColor:G}}/>
-                <span style={{fontSize:12,fontWeight:600,color:lessonPrepped[cl.id]?G:"#92400E"}}>{lessonPrepped[cl.id]?"✅ Đã soạn bài":"📝 Xác nhận đã soạn bài"}</span>
-              </label>
+              <div style={{fontSize:11,fontWeight:700,color:"#92400E",marginBottom:6}}>📝 Soạn bài</div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>setLessonPrepped(p=>({...p,[cl.id]:true}))} style={{flex:1,padding:"7px 8px",borderRadius:7,border:`2px solid ${lessonPrepped[cl.id]?G:"#E2E8F0"}`,background:lessonPrepped[cl.id]?G+"10":W,color:lessonPrepped[cl.id]?G:"#888",fontWeight:700,cursor:"pointer",fontSize:11}}>✅ Đã soạn</button>
+                <button onClick={()=>setLessonPrepped(p=>({...p,[cl.id]:false}))} style={{flex:1,padding:"7px 8px",borderRadius:7,border:`2px solid ${lessonPrepped[cl.id]===false?R:"#E2E8F0"}`,background:lessonPrepped[cl.id]===false?R+"10":W,color:lessonPrepped[cl.id]===false?R:"#888",fontWeight:700,cursor:"pointer",fontSize:11}}>❌ Chưa soạn</button>
+              </div>
             </div>
             <Btn full onClick={()=>doCheckIn(cl,locType)} bg={accent} style={{marginTop:8}}>⏰ CHECK-IN Ca {cl.caNumber}</Btn>
           </>}
@@ -2706,6 +2714,34 @@ function TAtt({data,save,user}){
         </div>
       </Card>;
     })}
+
+    {/* Student expiry alerts for teacher */}
+    {(()=>{
+      const now=new Date();const qEnd=new Date(now.getFullYear(),Math.ceil((now.getMonth()+1)/3)*3,0);
+      const in30=new Date(now.getTime()+30*24*3600000);
+      const myStudentIds=[...new Set(myAllClasses.flatMap(c=>(c.studentIds||[])))];
+      const myStudents=myStudentIds.map(sid=>data.students.find(s=>s.id===sid)).filter(Boolean);
+      const expSoon=myStudents.filter(s=>s.expiryDate&&new Date(s.expiryDate)<=in30&&s.status==="Đang học");
+      const expQuarter=myStudents.filter(s=>s.expiryDate&&new Date(s.expiryDate)>in30&&new Date(s.expiryDate)<=qEnd&&s.status==="Đang học");
+      if(expSoon.length===0&&expQuarter.length===0)return null;
+      return <Card style={{marginTop:10,border:`2px solid ${O}`,background:"#FFFBEB"}}>
+        <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:6}}>⏰ HV sắp hết khóa — Cần chăm sóc!</div>
+        {expSoon.length>0&&<div style={{marginBottom:6}}>
+          <div style={{fontSize:10,fontWeight:700,color:R,marginBottom:3}}>🔴 Trong 30 ngày ({expSoon.length})</div>
+          {expSoon.map(s=><div key={s.id} style={{fontSize:11,padding:"2px 0",display:"flex",justifyContent:"space-between"}}>
+            <span>{s.name} — PH: {s.parentName||"?"}</span>
+            <span style={{color:R,fontWeight:600,fontSize:10}}>{s.expiryDate}</span>
+          </div>)}
+        </div>}
+        {expQuarter.length>0&&<div>
+          <div style={{fontSize:10,fontWeight:700,color:O,marginBottom:3}}>🟠 Trong quý ({expQuarter.length})</div>
+          {expQuarter.map(s=><div key={s.id} style={{fontSize:11,padding:"2px 0",display:"flex",justifyContent:"space-between"}}>
+            <span>{s.name}</span>
+            <span style={{color:O,fontWeight:600,fontSize:10}}>{s.expiryDate}</span>
+          </div>)}
+        </div>}
+      </Card>;
+    })()}
 
     {/* Month summary */}
     <Card style={{marginTop:10,background:"#F8FAFC"}}>
@@ -2776,7 +2812,7 @@ function TSchedule({data,user}){
               dayClasses.map(cl=>{
                 const cn=data.centers.find(c=>c.id===cl.centerId);
                 const done=daySessions.find(s=>s.classId===cl.id&&s.checkOut);
-                const sts=cl.studentIds.filter(sid=>{const st=data.students.find(s=>s.id===sid);return st&&(st.status==="Đang học"||st.status==="Trial");}).length;
+                const sts=(cl.studentIds||[]).filter(sid=>{const st=data.students.find(s=>s.id===sid);return st&&(st.status==="Đang học"||st.status==="Trial");}).length;
                 return <div key={cl.id} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",borderRadius:7,background:done?G+"08":isToday?B+"08":"#F8F8F8",marginBottom:2}}>
                   <span style={{fontSize:10,fontWeight:600,color:done?G:B}}>{cl.startTime}-{cl.endTime}</span>
                   <span style={{fontSize:11,fontWeight:600}}>{cn?.name}</span>
@@ -2798,7 +2834,7 @@ function TSchedule({data,user}){
           <div style={{fontWeight:700,fontSize:13,color:B,marginBottom:4}}>{DAYS_FULL[day]}</div>
           {cls.map(cl=>{
             const cn=data.centers.find(c=>c.id===cl.centerId);
-            const sts=cl.studentIds.filter(sid=>{const st=data.students.find(s=>s.id===sid);return st&&(st.status==="Đang học"||st.status==="Trial");}).length;
+            const sts=(cl.studentIds||[]).filter(sid=>{const st=data.students.find(s=>s.id===sid);return st&&(st.status==="Đang học"||st.status==="Trial");}).length;
             return <div key={cl.id} style={{fontSize:12,padding:"4px 0",borderTop:"1px solid #F5F5F5",display:"flex",justifyContent:"space-between"}}>
               <span>Ca {cl.caNumber} ({cl.startTime}-{cl.endTime}) • {cn?.name} <Badge>{cn?.type?.toUpperCase()}</Badge></span>
               <span style={{fontSize:11,color:"#888"}}>{cl.classLevel} • {sts} HV</span>
